@@ -83,6 +83,11 @@ select {
   display: none;
 }
 
+  .jaap-block {
+  padding: 0 15px 10px;
+  display: none;
+}
+
 .simran-row {
   display: flex;
   gap: 12px;
@@ -214,7 +219,7 @@ ${i===3 ? `
 
 
 ${i===4 ? `
-<div class="jaap-block" data-habit="4" style="padding:0 15px 10px; display:none;">
+<div class="jaap-block" data-habit="4">
   <label class="input-label">ਕਾਉਂਟਰ ਜਾਪ ਦੀ ਗਿਣਤੀ</label>
 <input class="jaap-count" type="number" min="0" max="150000"
     style="width:100%; padding:6px; border-radius:6px; border:1px solid #ccc;">
@@ -248,14 +253,28 @@ block.querySelectorAll("select").forEach(s => {
     }
   }
 
-// 🔹 Habit 5 toggle
+// 🔹 Habit 5 – Jaap counter toggle (LOAD)
 if(index == 4){
-  const block = document.querySelector('.jaap-block[data-habit="4"]');
-  if(block){
-    block.style.display = cb.checked ? "block" : "none";
-    block.querySelector("input").disabled = !cb.checked;
-  }
+  const block = cb.closest(".habit-block").querySelector(".jaap-block");
+  const input = block.querySelector(".jaap-count");
+
+  block.style.display = cb.checked ? "block" : "none";
+  input.disabled = !cb.checked;
+
+  // Restore saved value
+  input.value = day.jaapCount ?? "";
+
+  input.oninput = () => {
+    if(input.value !== ""){
+      day.jaapCount = input.value;
+    } else {
+      delete day.jaapCount;
+    }
+    all[dateKey(currentDate)] = day;
+    localStorage.setItem(STORAGE, JSON.stringify(all));
+  };
 }
+
 
   cb.onchange = () => {
     day.checks = day.checks || {};
@@ -271,6 +290,15 @@ if(index == 3){
     });
   }
 }
+    // 🔹 Habit 5 – Jaap counter LIVE toggle
+if(index == 4){
+  const block = cb.closest(".habit-block").querySelector(".jaap-block");
+  const input = block.querySelector(".jaap-count");
+
+  block.style.display = cb.checked ? "block" : "none";
+  input.disabled = !cb.checked;
+}
+
 
     all[dateKey(currentDate)] = day;
     localStorage.setItem(STORAGE, JSON.stringify(all));
@@ -300,25 +328,6 @@ h.oninput = m.oninput = () => {
     };
   } else {
     delete day.simran;
-  }
-  all[dateKey(currentDate)] = day;
-  localStorage.setItem(STORAGE, JSON.stringify(all));
-};
-}
-
-// Habit 5 – Jaap counter
-const j = document.querySelector(".jaap-count");
-if(j){
-  j.value = day.jaapCount !== undefined ? day.jaapCount : "";
-
-  const isFuture = dateKey(currentDate) > dateKey(today);
-  j.disabled = isFuture;
-
-j.oninput = () => {
-  if (j.value !== "") {
-    day.jaapCount = j.value;
-  } else {
-    delete day.jaapCount;
   }
   all[dateKey(currentDate)] = day;
   localStorage.setItem(STORAGE, JSON.stringify(all));
@@ -441,3 +450,4 @@ updateChart();
 </script>
 </body>
 </html>
+
