@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="pa-IN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adheyatamak Rules - Daily Checklist</title>
+<style>
+  body { font-family:"Noto Sans Punjabi", sans-serif; margin:0; padding:0; background:#f3f4f6; display:flex; flex-direction:column; align-items:center;}
+  header { width:100%; padding:20px; text-align:center; background:#4a148c; color:#fff; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.3);}
+  header h1 { margin:5px 0; font-size:1.2rem;}
+
+  #chartMonth { text-align:center; font-weight:bold; margin-top:10px; font-size:1rem; color:#4a148c; }
+  #chartContainer { width:90%; max-width:600px; height:120px; margin:10px 0;}
+
+  #dateNav { margin:10px 0; display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; }
+  .navButton {
+    font-size:2rem; width:50px; height:50px;
+    border-radius:50%; background:#eee;
+    box-shadow:0 0 10px rgba(142,36,170,0.7);
+    display:flex; justify-content:center; align-items:center;
+    cursor:pointer; transition:all 0.3s;
+  }
+  .navButton:hover { background:#d1c4e9; box-shadow:0 0 15px rgba(142,36,170,0.9), 0 0 25px rgba(142,36,170,0.6);}
+  #dateDisplay {
+    font-size:2rem; font-weight:bold;
+    padding:5px 15px; border-radius:8px;
+    background:#f3e5f5; color:#4a148c;
+    box-shadow:0 0 12px rgba(142,36,170,0.6);
+    text-align:center;
+  }
+  #toggleMonth, #todayBtn {
+    padding:8px 15px; font-size:1rem; font-weight:bold;
+    border:none; border-radius:6px; background:#8e24aa; color:#fff;
+    cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.2);
+    transition:background 0.3s;
+  }
+  #toggleMonth:hover, #todayBtn:hover { background:#a156d6;}
+
+  #checklist { width:90%; max-width:600px; margin-bottom:20px;}
+  .item {
+    display:grid; grid-template-columns:1fr 50px; align-items:center;
+    background:#fff; padding:10px 15px; margin:8px 0;
+    border-radius:8px; font-weight:bold; font-size:1rem;
+    box-shadow:0 0 8px rgba(142,36,170,0.4);
+    transition:box-shadow 0.3s;
+  }
+  .item:hover { box-shadow:0 0 15px rgba(142,36,170,0.8);}
+  .item span { padding-right:10px; }
+  .item input[type="checkbox"] {
+    justify-self:center; width:24px; height:24px; cursor:pointer;
+    accent-color:#2e7d32; transition:transform 0.2s, box-shadow 0.3s;
+  }
+  .item input[type="checkbox"]:checked { 
+    transform:scale(1.2);
+    box-shadow: 0 0 10px #2e7d32, 0 0 20px #66bb6a, 0 0 30px #a5d6a7;
+  }
+ .habit-block {
+    background: transparent;
+  }
+
+.input-label {
+  display: block;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: red;
+  margin-bottom: 6px;
+}
+
+select {
+  width: 100%;
+  height: 44px;
+  font-size: 1rem;
+  background-color: #fff;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+
+  appearance: menulist;
+  -webkit-appearance: menulist;
+}
+
+.simran-block {
+  padding: 0 15px 10px;
+  display: none;
+}
+
+.simran-row {
+  display: flex;
+  gap: 12px;
+}
+
+.simran-col {
+  flex: 1;
+}
+
+
+  /* Month modal */
+  #monthModal { 
+    display:none; position:fixed; top:10%; left:50%; transform:translateX(-50%);
+    width:90%; max-width:600px; height:auto; background:rgba(0,0,0,0.4); 
+    align-items:flex-start; justify-content:center; z-index:1000; overflow-y:auto; padding-top:10px;
+  }
+  #monthContent { background:#fff; padding:20px; border-radius:8px; max-height:80vh; overflow-y:auto;}
+  #monthContent h2 { text-align:center; margin-bottom:10px; }
+  .closeModal { float:right; cursor:pointer; font-size:1.2rem; font-weight:bold; background:#ccc; border-radius:50%; width:25px; height:25px; text-align:center; line-height:25px;}
+  .month-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:5px;}
+  .day { padding:5px; text-align:center; font-size:0.9rem; font-weight:bold; border-radius:6px; cursor:pointer;}
+  .day.empty { background:transparent; cursor:default; }
+  .day.future { opacity:0.4; cursor:not-allowed;}
+
+  footer { width:100%; text-align:center; padding:10px; background:#4a148c; color:#fff; font-weight:bold; font-size:1rem; margin-top:auto;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ਸਤਿਗੁਰ ਸੇਤੀ ਰਤਿਆ ਦਰਗਹ ਪਾਈਐ ਠਾਉ ॥</h1>
+  <h1>Adheyatamak Rules - Daily Checklist (ਅਧਿਆਤਮਿਕ ਨਿਯਮ - ਰੋਜ਼ਾਨਾ ਸਵੈਪੜਚੋਲ)</h1>
+</header>
+
+<div id="chartMonth"></div>
+<div id="chartContainer">
+  <canvas id="monthChart"></canvas>
+</div>
+
+<div id="dateNav">
+  <div id="prevDay" class="navButton">&#8592;</div>
+  <div id="dateDisplay"></div>
+  <div id="nextDay" class="navButton">&#8594;</div>
+  <button id="todayBtn">Today</button>
+  <button id="toggleMonth">ਮਹੀਨਾਵਾਰ ਦਰਸ਼ਨ</button>
+</div>
+
+<div id="checklist"></div>
+
+<!-- Modal for month calendar -->
+<div id="monthModal">
+  <div id="monthContent">
+    <div class="closeModal" id="closeModal">&times;</div>
+    <h2>ਮਹੀਨਾਵਾਰ ਦਰਸ਼ਨ</h2>
+    <div id="monthView"></div>
+  </div>
+</div>
+
+<footer>
+ਵਾਹਿਗੁਰੂ ਵਾਹਿਗੁਰੂ ਵਾਹਿਗੁਰੂ ਵਾਹਿਗੁਰੂ ਵਾਹਿਗੁਰੂ
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+<script>
+const STORAGE = "spiritualChecklist";
+let currentDate = new Date(); // uses local time
+
+// Auto-update at local midnight
+setInterval(() => { 
+  const now = new Date();
+  if (dateKey(now) !== dateKey(currentDate)) {
+    currentDate = now;
+    loadDay();
+    updateChart();
+  }
+}, 60 * 1000); // checks every minute
+
+
+function dateKey(d){
+  return d.getFullYear() + "-" +
+         String(d.getMonth() + 1).padStart(2, "0") + "-" +
+         String(d.getDate()).padStart(2, "0");
+}
+
+
+function format(d){return d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});}
+
+const habits = [
+"ਕੀ ਮੈਂ ਅੱਜ ਬਾਣੀ ਵਿਚਾਰ ਵਿਚਾਰ ਕੇ ਪੜ੍ਹੀ ਹੈ ? (ਸਮਝਣ ਦੇ ਮਨੋਰਥ ਲਈ)",
+"ਕੀ ਮੈਂ ਅੱਜ ਸੰਗਤ ਕੀਤੀ ਹੈ ? (ਗਿਆਨ ਪ੍ਰਾਪਤ ਕਰਨ ਲਈ)",
+"ਕੀ ਅੱਜ ਮੇਰਾ ਮਨ ਸੰਸਾਰ ਅੰਦਰ ਸਾਵਧਾਨ ਹੋ ਕੇ ਵਿਚਰਿਆ ? (ਬਿੱਬਰਜਿਤ ਕਰਮਾਂ ਤੋਂ ਬਚਣ ਲਈ)",
+"ਕੀ ਮੈਂ ਅੱਜ ਇਕਾਂਤ ਸਿਮਰਨ ਦੀ ਹਾਜ਼ਰੀ ਲਗਾਈ ਹੈ? (ਘੱਟੋ ਘੱਟ 1 ਘੰਟੇ ਦੀ)",
+"ਕੀ ਮੈਂ ਅੱਜ ਤੁਰਦੇ ਫਿਰਦੇ ਵਾਹਿਗੁਰੂ ਦਾ ਜਾਪ ਕੀਤਾ ? (ਮਨ ਨੂ ਵਿਚਾਰਾਂ ਦੀ ਮੈਲ ਲੱਗਣ ਤੋਂ ਬਚਾਉਣ ਲਈ)",
+"ਕੀ ਮੈਂ ਅੱਜ ਅਨਹਦ ਸ਼ਬਦਾਂ ਨੂ ਏਕਾਂਤ ਵਿੱਚ ਬੈਠ ਕੇ ਸੁਣਿਆ? (ਸੁਰਤ ਨੂ ਸ਼ਬਦ ਨਾਲ ਜੋੜਨ ਲਈ)",
+"ਕੀ ਮੈਂ ਅੱਜ ਏਕਾਂਤ ਵਿੱਚ ਬੈਠ ਕੇ ਸਾਹਮਣੇ ਸੁੰਨ ਵਿੱਚ ਦੇਖਣ ਦੀ ਕੋਸ਼ਿਸ਼ ਕੀਤੀ? (ਪ੍ਰਕਾਸ਼ ਰੂਪ ਪਰਮਾਤਮਾ ਦੇ ਦਰਸ਼ਨ ਕਰਨ ਲਈ)"
+];
+
+document.getElementById("checklist").innerHTML = habits.map((h,i)=>`
+<div class="habit-block">
+  <label class="item">
+    <span>${h}</span>
+    <input type="checkbox" data-index="${i}">
+  </label>
+
+
+${i===3 ? `
+<div class="simran-block" data-habit="3">
+  <div class="simran-row">
+    <div class="simran-col">
+      <label class="input-label">Hours</label>
+<select class="simran-hours">
+        ${Array.from({length:13},(_,i)=>`<option value="${i}">${i}</option>`).join("")}
+      </select>
+    </div>
+
+    <div class="simran-col">
+      <label class="input-label">Minutes</label>
+   <select class="simran-minutes">
+        ${Array.from({length:12},(_,i)=>i*5)
+          .map(v=>`<option value="${v}">${v}</option>`).join("")}
+      </select>
+    </div>
+  </div>
+</div>
+
+` : ""}
+
+
+
+${i===4 ? `
+<div class="jaap-block" data-habit="4" style="padding:0 15px 10px; display:none;">
+  <label class="input-label">ਕਾਉਂਟਰ ਜਾਪ ਦੀ ਗਿਣਤੀ</label>
+<input class="jaap-count" type="number" min="0" max="150000"
+    style="width:100%; padding:6px; border-radius:6px; border:1px solid #ccc;">
+</div>
+
+` : ""}
+</div>
+`).join("");
+
+
+function loadDay(){
+  document.getElementById("dateDisplay").textContent = format(currentDate);
+  const all=JSON.parse(localStorage.getItem(STORAGE))||{};
+  const day=all[dateKey(currentDate)]||{ checks:{} };
+  const today=new Date();
+
+document.querySelectorAll("#checklist input[type='checkbox']").forEach(cb=>{
+  const index = cb.dataset.index;
+
+  cb.checked = day.checks?.[index] || false;
+  cb.disabled = dateKey(currentDate) > dateKey(today);
+
+  // 🔹 Habit 4 input block toggle
+if(index == 3){
+  const block = document.querySelector('.simran-block[data-habit="3"]');
+    if(block){
+      block.style.display = cb.checked ? "block" : "none";
+block.querySelectorAll("select").forEach(s => {
+  s.disabled = !cb.checked;
+});
+    }
+  }
+
+// 🔹 Habit 5 toggle
+if(index == 4){
+  const block = document.querySelector('.jaap-block[data-habit="4"]');
+  if(block){
+    block.style.display = cb.checked ? "block" : "none";
+    block.querySelector("input").disabled = !cb.checked;
+  }
+}
+
+  cb.onchange = () => {
+    day.checks = day.checks || {};
+    day.checks[index] = cb.checked;
+
+    // Toggle inputs live
+if(index == 3){
+  const block = document.querySelector('.simran-block[data-habit="3"]');
+  if(block){
+    block.style.display = cb.checked ? "block" : "none";
+    block.querySelectorAll("select").forEach(s=>{
+      s.disabled = !cb.checked;
+    });
+  }
+}
+
+    all[dateKey(currentDate)] = day;
+    localStorage.setItem(STORAGE, JSON.stringify(all));
+    buildMonth();
+    updateChart();
+  };
+});
+
+
+  document.getElementById("chartMonth").textContent = currentDate.toLocaleString('default',{month:'long', year:'numeric'});
+// Habit 4 – Simran time
+// Habit 4 – Simran time
+const h = document.querySelector(".simran-hours");
+const m = document.querySelector(".simran-minutes");
+if(h && m){
+  h.value = day.simran && day.simran.hours !== undefined ? day.simran.hours : "0";
+  m.value = day.simran && day.simran.minutes !== undefined ? day.simran.minutes : "0";
+
+  const isFuture = dateKey(currentDate) > dateKey(today);
+  h.disabled = isFuture;
+  m.disabled = isFuture;
+h.oninput = m.oninput = () => {
+  if (h.value !== "" || m.value !== "") {
+    day.simran = {
+      hours: h.value,
+      minutes: m.value
+    };
+  } else {
+    delete day.simran;
+  }
+  all[dateKey(currentDate)] = day;
+  localStorage.setItem(STORAGE, JSON.stringify(all));
+};
+}
+
+// Habit 5 – Jaap counter
+const j = document.querySelector(".jaap-count");
+if(j){
+  j.value = day.jaapCount !== undefined ? day.jaapCount : "";
+
+  const isFuture = dateKey(currentDate) > dateKey(today);
+  j.disabled = isFuture;
+
+j.oninput = () => {
+  if (j.value !== "") {
+    day.jaapCount = j.value;
+  } else {
+    delete day.jaapCount;
+  }
+  all[dateKey(currentDate)] = day;
+  localStorage.setItem(STORAGE, JSON.stringify(all));
+};
+}
+}
+
+function buildMonth(){
+  const mv=document.getElementById("monthView");
+  const all=JSON.parse(localStorage.getItem(STORAGE))||{};
+  mv.innerHTML="<div class='month-grid'></div>";
+  const grid=mv.firstChild;
+  const y=currentDate.getFullYear(), m=currentDate.getMonth();
+  const first=new Date(y,m,1), last=new Date(y,m+1,0);
+  const today=new Date();
+
+  for(let i=0;i<first.getDay();i++){
+    const empty=document.createElement("div");empty.className="day empty";grid.appendChild(empty);
+  }
+
+  for(let d=1;d<=last.getDate();d++){
+    const date=new Date(y,m,d);
+    const data=all[dateKey(date)]||{};
+    const doneCount=Object.values(data.checks||{}).filter(v=>v).length;
+    let bg="";
+    if(doneCount===7) bg="#2e7d32"; else if(doneCount>=4) bg="#66bb6a"; else if(doneCount>=1) bg="#a5d6a7"; else bg="#eee";
+    const el=document.createElement("div");
+    el.className="day";
+if(dateKey(date) > dateKey(today)){ el.classList.add("future"); }
+    el.textContent = `${date.toLocaleString('default', { month: 'short' })} ${d} (${doneCount}/7)`;
+    el.style.backgroundColor=bg;
+    el.style.color=(doneCount>0?"#fff":"#000");
+    el.style.fontWeight="bold";
+    el.style.borderRadius="5px";
+    el.title=`${format(date)} - ${doneCount}/7 habits completed`;
+    el.onclick=()=>{
+   if (dateKey(date) > dateKey(today)) return;
+      currentDate=date; closeModal(); loadDay(); updateChart();
+    }
+    grid.appendChild(el);
+  }
+}
+
+const modal = document.getElementById("monthModal");
+const closeBtn = document.getElementById("closeModal");
+function openModal(){ modal.style.display="flex"; }
+function closeModal(){ modal.style.display="none"; }
+document.getElementById("toggleMonth").onclick=()=>{buildMonth(); openModal();}
+closeBtn.onclick = closeModal;
+window.onclick = e=>{ if(e.target==modal) closeModal(); }
+
+document.getElementById("prevDay").onclick=()=>{currentDate.setDate(currentDate.getDate()-1);loadDay(); updateChart();}
+document.getElementById("nextDay").onclick=()=>{currentDate.setDate(currentDate.getDate()+1);loadDay(); updateChart();}
+document.getElementById("todayBtn").onclick = () => { currentDate=new Date(); loadDay(); updateChart(); }
+
+let chart=null;
+function updateChart(){
+  const all=JSON.parse(localStorage.getItem(STORAGE))||{};
+  const y=currentDate.getFullYear(), m=currentDate.getMonth();
+  const days=Array.from({length:new Date(y,m+1,0).getDate()},(_,i)=>i+1);
+const data = days.map(d => {
+  const val = all[dateKey(new Date(y, m, d))] || {};
+  return Object.values(val.checks || {}).filter(v => v).length;
+});
+
+
+  const pointBg = data.map(v=>{
+    if(v===7) return "#2e7d32";
+    if(v>=4) return "#66bb6a";
+    if(v>=1) return "#a5d6a7";
+    return "#ccc";
+  });
+
+  const ctx=document.getElementById("monthChart").getContext("2d");
+  if(chart) chart.destroy();
+
+  chart=new Chart(ctx,{
+    type:'line',
+    plugins:[ChartDataLabels],
+    data:{
+      labels:days.map(d=>d.toString()),
+      datasets:[{
+        label:'Habits Completed',
+        data:data,
+        fill:true,
+        backgroundColor:'rgba(142,36,170,0.2)',
+        borderColor:'#8e24aa',
+        tension:0.3,
+        pointRadius:6,
+        pointBackgroundColor:pointBg,
+        pointHoverRadius:8,
+        pointHoverBackgroundColor:pointBg,
+        pointStyle:'circle',
+        pointBorderWidth:0,
+        datalabels:{ align:'top', color:'#4a148c', font:{weight:'bold',size:12} }
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      layout:{ padding:{ top:35 } },
+      scales:{
+        y:{ display:false, beginAtZero:true, max:7 },
+        x:{ 
+          ticks:{ 
+            autoSkip:false,      // show all labels
+            font:{ size:10 }     // smaller font to fit
+          } 
+        }
+      },
+      plugins:{ legend:{display:false}, tooltip:{enabled:false} },
+      elements: { line:{borderWidth:2}, point:{radius:6, hoverRadius:8} }
+    }
+  });
+}
+
+loadDay();
+buildMonth();
+updateChart();
+</script>
+</body>
+</html>
