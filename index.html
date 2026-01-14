@@ -221,9 +221,15 @@ ${i===3 ? `
 ${i===4 ? `
 <div class="jaap-block" data-habit="4">
   <label class="input-label">ਕਾਉਂਟਰ ਜਾਪ ਦੀ ਗਿਣਤੀ</label>
-<input class="jaap-count" type="number" min="0" max="150000"
-    style="width:100%; padding:6px; border-radius:6px; border:1px solid #ccc;">
+  <select class="jaap-count">
+    <option value="">— Select —</option>
+    ${Array.from({ length: 150 }, (_, i) => {
+      const v = (i + 1) * 1000;
+      return `<option value="${v}">${v.toLocaleString()}</option>`;
+    }).join("")}
+  </select>
 </div>
+
 
 ` : ""}
 </div>
@@ -256,23 +262,27 @@ block.querySelectorAll("select").forEach(s => {
 // 🔹 Habit 5 – Jaap counter toggle (LOAD)
 if(index == 4){
   const block = cb.closest(".habit-block").querySelector(".jaap-block");
-  const input = block.querySelector(".jaap-count");
+  const select = block.querySelector(".jaap-count");
 
-  block.style.display = cb.checked ? "block" : "none";
-  input.disabled = !cb.checked;
+// show / hide
+block.style.display = cb.checked ? "block" : "none";
 
-  // Restore saved value
-  input.value = day.jaapCount ?? "";
+// disable for unchecked OR future dates
+select.disabled = !cb.checked || dateKey(currentDate) > dateKey(today);
 
-  input.oninput = () => {
-    if(input.value !== ""){
-      day.jaapCount = input.value;
-    } else {
-      delete day.jaapCount;
-    }
-    all[dateKey(currentDate)] = day;
-    localStorage.setItem(STORAGE, JSON.stringify(all));
-  };
+// restore saved value
+select.value = day.jaapCount ?? "";
+
+// save on change
+select.onchange = () => {
+  if (select.value) {
+    day.jaapCount = select.value;
+  } else {
+    delete day.jaapCount;
+  }
+  all[dateKey(currentDate)] = day;
+  localStorage.setItem(STORAGE, JSON.stringify(all));
+};
 }
 
 
@@ -293,10 +303,9 @@ if(index == 3){
     // 🔹 Habit 5 – Jaap counter LIVE toggle
 if(index == 4){
   const block = cb.closest(".habit-block").querySelector(".jaap-block");
-  const input = block.querySelector(".jaap-count");
-
+  const select = block.querySelector(".jaap-count");
   block.style.display = cb.checked ? "block" : "none";
-  input.disabled = !cb.checked;
+  select.disabled = !cb.checked;
 }
 
 
@@ -450,4 +459,5 @@ updateChart();
 </script>
 </body>
 </html>
+
 
