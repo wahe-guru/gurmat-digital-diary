@@ -1,18 +1,158 @@
 <!DOCTYPE html>
-<html lang="pa-IN">
+<html lang="pa">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Adheyatamak Rules - Daily Checklist</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gurmukhi:wght@400;700;800&display=swap" rel="stylesheet">
+
 <style>
-  body { font-family:"Noto Sans Punjabi", sans-serif; margin:0; padding:0; background:#f3f4f6; display:flex; flex-direction:column; align-items:center;}
-  header { width:100%; padding:20px; text-align:center; background:#4a148c; color:#fff; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.3);}
-  header h1 { margin:5px 0; font-size:1.2rem;}
 
-  #chartMonth { text-align:center; font-weight:bold; margin-top:10px; font-size:1rem; color:#4a148c; }
-  #chartContainer { width:90%; max-width:600px; height:120px; margin:10px 0;}
+body {
+  font-family: "Noto Sans Gurmukhi", sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #f3f4f6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
 
-  #dateNav { margin:10px 0; display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; }
+
+
+header {
+  width:100%;
+  text-align:center;
+  background:#4a148c;
+  color:#fff;
+  font-weight:bold;
+  box-shadow:0 2px 5px rgba(0,0,0,0.3);
+}
+
+header h1:first-child {
+  font-size: 1.1rem;
+}
+
+header h1:last-child {
+  font-size: 1.4rem;   /* ✅ bigger page title */
+}
+
+
+.main {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+
+
+
+
+#chartMonth {
+  text-align: center;
+  font-weight: bold;
+  font-size: 1rem;
+  color: #4a148c;
+  margin: 12px 0 4px;   /* top | left-right | bottom */
+}
+
+
+.chart-wrapper {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+
+
+.chartContainer {
+  display: none; /* Hide the chart by default */
+  width: 100%;
+  height: 150px;
+  max-width: 100%;
+  overflow: visible;
+  margin-bottom: 16px;
+}
+
+.toggleChartBtn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #4a148c;
+  cursor: pointer;
+  margin-right: 6px;
+}
+
+.chart-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.chart-title button {
+  margin-left: 10px;
+}
+
+
+
+.lang-row {
+  width: 100%;
+  margin: 12px 0 16px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  /* visual highlight */
+  background: #ede7f6;
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(142,36,170,0.25);
+
+  position: relative;
+}
+
+
+
+.lang-label {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #6a1b9a;
+  margin-bottom: 4px;
+}
+
+
+#dateNav {
+  width: 100%;
+  margin: 12px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+/* Wider screens → horizontal */
+@media (min-width: 480px) {
+  #dateNav {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+/* Very small phones → smaller nav buttons */
+@media (max-width: 360px) {
+  .navButton {
+    width: 42px;
+    height: 42px;
+    font-size: 1.6rem;
+  }
+}
+
+
+
   .navButton {
     font-size:2rem; width:50px; height:50px;
     border-radius:50%; background:#eee;
@@ -36,7 +176,11 @@
   }
   #toggleMonth:hover, #todayBtn:hover { background:#a156d6;}
 
-  #checklist { width:90%; max-width:600px; margin-bottom:20px;}
+#checklist {
+  width: 100%;
+  margin-bottom: 20px;
+}
+
   .item {
     display:grid; grid-template-columns:1fr 50px; align-items:center;
     background:#fff; padding:10px 15px; margin:8px 0;
@@ -59,33 +203,60 @@
   }
 
 .input-label {
-  display: block;
+  display: inline-block;
   font-weight: 800;
-  font-size: 0.9rem;
-  color: red;
+  font-size: 0.99rem;
+  color: #4a148c;
+
+  background: #ede7f6;
+  padding: 4px 10px;
+  border-radius: 6px;
+
   margin-bottom: 6px;
 }
 
-select {
+.input-group {
+  background: #ede7f6;
+  padding: 10px 12px 14px;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(142,36,170,0.25);
+  margin-bottom: 12px;
+}
+
+
+
+
+#checklist select {
   width: 100%;
   height: 44px;
   font-size: 1rem;
   background-color: #fff;
   border-radius: 8px;
   border: 1px solid #ccc;
-
-  appearance: menulist;
-  -webkit-appearance: menulist;
 }
 
-.simran-block {
-  padding: 0 15px 10px;
-  display: none;
+.jaap-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
-  .jaap-block {
-  padding: 0 15px 10px;
-  display: none;
+.jaap-count {
+  width: 50%;
+  max-width: 220px;
+}
+
+@media (max-width: 420px) {
+  .jaap-count {
+    width: 100%;
+  }
+}
+
+
+
+.simran-block,
+.jaap-block {
+  padding: 0;
 }
 
 .simran-row {
@@ -112,43 +283,146 @@ select {
   .day.empty { background:transparent; cursor:default; }
   .day.future { opacity:0.4; cursor:not-allowed;}
 
-  footer { width:100%; text-align:center; padding:10px; background:#4a148c; color:#fff; font-weight:bold; font-size:1rem; margin-top:auto;}
+footer {
+  width:100%;
+  text-align:center;
+  background:#4a148c;
+  color:#fff;
+  font-weight:bold;
+  font-size:1rem;
+  margin-top:auto;
+}
+
+header .main,
+footer .main {
+  padding: 20px;
+}
+
+#languageSelect {
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  padding: 12px 44px 12px 14px;
+  font-size: 1.05rem;
+  font-weight: 800;
+
+  border-radius: 10px;
+  border: 2px solid #8e24aa;
+
+  background-color: #f3e5f5;
+  color: #4a148c;
+
+  min-width: 160px;
+  cursor: pointer;
+
+  box-shadow: 0 0 0 3px rgba(142,36,170,0.3);
+
+  /* ✅ dropdown arrow */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%234a148c' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 18px;
+}
+
+
+
+
 </style>
 </head>
 <body>
 
+
 <header>
-  <h1>ਸਤਿਗੁਰ ਸੇਤੀ ਰਤਿਆ ਦਰਗਹ ਪਾਈਐ ਠਾਉ ॥</h1>
-  <h1>Adheyatamak Rules - Daily Checklist (ਅਧਿਆਤਮਿਕ ਨਿਯਮ - ਰੋਜ਼ਾਨਾ ਸਵੈਪੜਚੋਲ)</h1>
+  <div class="main">
+    <h1 id="headerLine1"></h1>
+    <h1 id="headerTitle"></h1>
+  </div>
 </header>
 
+
+
+<div class="main">
+
+<div class="lang-row">
+<label class="lang-label" for="languageSelect">Language / ਭਾਸ਼ਾ / भाषा</label>
+<select id="languageSelect">
+    <option value="pa">ਪੰਜਾਬੀ</option>
+    <option value="hi">हिंदी</option>
+    <option value="en">English</option>
+  </select>
+</div>
+
+
 <div id="chartMonth"></div>
-<div id="chartContainer">
-  <canvas id="monthChart"></canvas>
+
+<div class="chart-wrapper">
+  <h3 class="chart-title">
+    <button class="toggleChartBtn"
+      onclick="toggleChart('habitChart', this)">▼</button>
+    <span id="chartTitleHabits"></span>
+  </h3>
+
+  <div class="chartContainer" id="habitChartContainer" style="display:none">
+    <canvas id="habitChart"></canvas>
+  </div>
 </div>
 
+<div class="chart-wrapper">
+  <h3 class="chart-title">
+    <button class="toggleChartBtn"
+      onclick="toggleChart('simranChart', this)">▼</button>
+    <span id="chartTitleSimran"></span>
+  </h3>
+
+  <div class="chartContainer" id="simranChartContainer" style="display:none">
+    <canvas id="simranChart"></canvas>
+  </div>
+</div>
+
+
+<div class="chart-wrapper">
+  <h3 class="chart-title">
+    <button class="toggleChartBtn"
+      onclick="toggleChart('jaapChart', this)">▼</button>
+    <span id="chartTitleJaap"></span>
+  </h3>
+
+  <div class="chartContainer" id="jaapChartContainer" style="display:none">
+    <canvas id="jaapChart"></canvas>
+  </div>
+</div>
+
+
+
+<!-- DATE ROW -->
 <div id="dateNav">
-  <div id="prevDay" class="navButton">&#8592;</div>
-  <div id="dateDisplay"></div>
-  <div id="nextDay" class="navButton">&#8594;</div>
-  <button id="todayBtn">Today</button>
-  <button id="toggleMonth">ਮਹੀਨਾਵਾਰ ਦਰਸ਼ਨ</button>
-</div>
+    <div id="prevDay" class="navButton">&#8592;</div>
+    <div id="dateDisplay"></div>
+    <div id="nextDay" class="navButton">&#8594;</div>
+    <button id="todayBtn"></button>
+    <button id="toggleMonth"></button>
+  </div>
 
-<div id="checklist"></div>
+  <div id="checklist"></div>
+
+</div>
 
 <!-- Modal for month calendar -->
 <div id="monthModal">
   <div id="monthContent">
     <div class="closeModal" id="closeModal">&times;</div>
-    <h2>ਮਹੀਨਾਵਾਰ ਦਰਸ਼ਨ</h2>
+    <h2 id="monthTitle"></h2>
     <div id="monthView"></div>
   </div>
 </div>
 
 <footer>
-ਵਾਹਿਗੁਰੂ ਵਾਹਿਗੁਰੂ ਵਾਹਿਗੁਰੂ ਵਾਹਿਗੁਰੂ ਵਾਹਿਗੁਰੂ
+  <div class="main" id="footerText"></div>
 </footer>
+
+
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
@@ -176,20 +450,15 @@ function dateKey(d){
 
 function format(d){return d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});}
 
-const habits = [
-"ਕੀ ਮੈਂ ਅੱਜ ਬਾਣੀ ਵਿਚਾਰ ਵਿਚਾਰ ਕੇ ਪੜ੍ਹੀ ਹੈ ? (ਸਮਝਣ ਦੇ ਮਨੋਰਥ ਲਈ)",
-"ਕੀ ਮੈਂ ਅੱਜ ਸੰਗਤ ਕੀਤੀ ਹੈ ? (ਗਿਆਨ ਪ੍ਰਾਪਤ ਕਰਨ ਲਈ)",
-"ਕੀ ਅੱਜ ਮੇਰਾ ਮਨ ਸੰਸਾਰ ਅੰਦਰ ਸਾਵਧਾਨ ਹੋ ਕੇ ਵਿਚਰਿਆ ? (ਬਿੱਬਰਜਿਤ ਕਰਮਾਂ ਤੋਂ ਬਚਣ ਲਈ)",
-"ਕੀ ਮੈਂ ਅੱਜ ਇਕਾਂਤ ਸਿਮਰਨ ਦੀ ਹਾਜ਼ਰੀ ਲਗਾਈ ਹੈ? (ਘੱਟੋ ਘੱਟ 1 ਘੰਟੇ ਦੀ)",
-"ਕੀ ਮੈਂ ਅੱਜ ਤੁਰਦੇ ਫਿਰਦੇ ਵਾਹਿਗੁਰੂ ਦਾ ਜਾਪ ਕੀਤਾ ? (ਮਨ ਨੂ ਵਿਚਾਰਾਂ ਦੀ ਮੈਲ ਲੱਗਣ ਤੋਂ ਬਚਾਉਣ ਲਈ)",
-"ਕੀ ਮੈਂ ਅੱਜ ਅਨਹਦ ਸ਼ਬਦਾਂ ਨੂ ਏਕਾਂਤ ਵਿੱਚ ਬੈਠ ਕੇ ਸੁਣਿਆ? (ਸੁਰਤ ਨੂ ਸ਼ਬਦ ਨਾਲ ਜੋੜਨ ਲਈ)",
-"ਕੀ ਮੈਂ ਅੱਜ ਏਕਾਂਤ ਵਿੱਚ ਬੈਠ ਕੇ ਸਾਹਮਣੇ ਸੁੰਨ ਵਿੱਚ ਦੇਖਣ ਦੀ ਕੋਸ਼ਿਸ਼ ਕੀਤੀ? (ਪ੍ਰਕਾਸ਼ ਰੂਪ ਪਰਮਾਤਮਾ ਦੇ ਦਰਸ਼ਨ ਕਰਨ ਲਈ)"
+const habitKeys = [
+  "h1","h2","h3","h4","h5","h6","h7"
 ];
 
-document.getElementById("checklist").innerHTML = habits.map((h,i)=>`
+
+document.getElementById("checklist").innerHTML = habitKeys.map((key,i)=>`
 <div class="habit-block">
   <label class="item">
-    <span>${h}</span>
+ <span id="habit-${i}"></span>
     <input type="checkbox" data-index="${i}">
   </label>
 
@@ -197,16 +466,18 @@ document.getElementById("checklist").innerHTML = habits.map((h,i)=>`
 ${i===3 ? `
 <div class="simran-block" data-habit="3">
   <div class="simran-row">
-    <div class="simran-col">
-      <label class="input-label">Hours</label>
-<select class="simran-hours">
+<div class="simran-col input-group">
+ <label class="input-label label-hours"></label>
+  <select class="simran-hours">
+
         ${Array.from({length:13},(_,i)=>`<option value="${i}">${i}</option>`).join("")}
       </select>
     </div>
 
-    <div class="simran-col">
-      <label class="input-label">Minutes</label>
-   <select class="simran-minutes">
+<div class="simran-col input-group">
+  <label class="input-label label-minutes"></label>
+  <select class="simran-minutes">
+
         ${Array.from({length:12},(_,i)=>i*5)
           .map(v=>`<option value="${v}">${v}</option>`).join("")}
       </select>
@@ -219,10 +490,11 @@ ${i===3 ? `
 
 
 ${i===4 ? `
-<div class="jaap-block" data-habit="4">
-  <label class="input-label">ਕਾਉਂਟਰ ਜਾਪ ਦੀ ਗਿਣਤੀ</label>
+<div class="jaap-block input-group" data-habit="4">
+<label class="input-label label-jaap"></label>
   <select class="jaap-count">
-    <option value="">— Select —</option>
+
+    <option value="0">0</option>
     ${Array.from({ length: 150 }, (_, i) => {
       const v = (i + 1) * 1000;
       return `<option value="${v}">${v.toLocaleString()}</option>`;
@@ -271,7 +543,8 @@ block.style.display = cb.checked ? "block" : "none";
 select.disabled = !cb.checked || dateKey(currentDate) > dateKey(today);
 
 // restore saved value
-select.value = day.jaapCount ?? "";
+select.value = day.jaapCount ?? "0";
+
 
 // save on change
 select.onchange = () => {
@@ -282,7 +555,10 @@ select.onchange = () => {
   }
   all[dateKey(currentDate)] = day;
   localStorage.setItem(STORAGE, JSON.stringify(all));
+
+  updateChart(); // ✅ LIVE update
 };
+
 }
 
 
@@ -294,18 +570,35 @@ select.onchange = () => {
 if(index == 3){
   const block = document.querySelector('.simran-block[data-habit="3"]');
   if(block){
+    const h = block.querySelector(".simran-hours");
+    const m = block.querySelector(".simran-minutes");
+
     block.style.display = cb.checked ? "block" : "none";
-    block.querySelectorAll("select").forEach(s=>{
-      s.disabled = !cb.checked;
-    });
+    h.disabled = !cb.checked;
+    m.disabled = !cb.checked;
+
+    if(!cb.checked){
+      // 🔥 RESET VALUES
+      h.value = "0";
+      m.value = "0";
+      delete day.simran;
+    }
   }
 }
+
     // 🔹 Habit 5 – Jaap counter LIVE toggle
 if(index == 4){
   const block = cb.closest(".habit-block").querySelector(".jaap-block");
   const select = block.querySelector(".jaap-count");
+
   block.style.display = cb.checked ? "block" : "none";
   select.disabled = !cb.checked;
+
+  if(!cb.checked){
+    // 🔥 RESET VALUE
+    select.value = "0";
+    delete day.jaapCount;
+  }
 }
 
 
@@ -330,17 +623,21 @@ if(h && m){
   h.disabled = isFuture;
   m.disabled = isFuture;
 h.oninput = m.oninput = () => {
-  if (h.value !== "" || m.value !== "") {
-    day.simran = {
-      hours: h.value,
-      minutes: m.value
-    };
-  } else {
-    delete day.simran;
-  }
+  if (!day.checks?.[3]) return;
+
+  day.simran = {
+    hours: h.value,
+    minutes: m.value
+  };
+
   all[dateKey(currentDate)] = day;
   localStorage.setItem(STORAGE, JSON.stringify(all));
+
+  updateChart(); // ✅ LIVE update
 };
+
+
+
 }
 }
 
@@ -392,72 +689,287 @@ document.getElementById("prevDay").onclick=()=>{currentDate.setDate(currentDate.
 document.getElementById("nextDay").onclick=()=>{currentDate.setDate(currentDate.getDate()+1);loadDay(); updateChart();}
 document.getElementById("todayBtn").onclick = () => { currentDate=new Date(); loadDay(); updateChart(); }
 
-let chart=null;
-function updateChart(){
-  const all=JSON.parse(localStorage.getItem(STORAGE))||{};
-  const y=currentDate.getFullYear(), m=currentDate.getMonth();
-  const days=Array.from({length:new Date(y,m+1,0).getDate()},(_,i)=>i+1);
-const data = days.map(d => {
-  const val = all[dateKey(new Date(y, m, d))] || {};
-  return Object.values(val.checks || {}).filter(v => v).length;
+
+let habitChart, simranChart, jaapChart;
+
+function updateChart() {
+  const all = JSON.parse(localStorage.getItem(STORAGE)) || {};
+  const y = currentDate.getFullYear();
+  const m = currentDate.getMonth();
+
+  const days = Array.from(
+    { length: new Date(y, m + 1, 0).getDate() },
+    (_, i) => i + 1
+  );
+
+  const habitData = days.map(d => {
+    const val = all[dateKey(new Date(y, m, d))] || {};
+    return Object.values(val.checks || {}).filter(v => v).length;
+  });
+
+const simranHours = days.map(d => {
+  const val = all[dateKey(new Date(y, m, d))];
+  if (!val?.simran) return 0;
+  return (
+    (+val.simran.hours || 0) +
+    ((+val.simran.minutes || 0) / 60)
+  );
 });
 
 
-  const pointBg = data.map(v=>{
-    if(v===7) return "#2e7d32";
-    if(v>=4) return "#66bb6a";
-    if(v>=1) return "#a5d6a7";
-    return "#ccc";
+  const jaapCounts = days.map(d => {
+    const val = all[dateKey(new Date(y, m, d))];
+    return +val?.jaapCount || 0;
   });
 
-  const ctx=document.getElementById("monthChart").getContext("2d");
-  if(chart) chart.destroy();
+  habitChart = renderLineChart(
+    "habitChart",
+    habitChart,
+    habitData,
+    7,
+    "#8e24aa",
+    v => v
+  );
 
-  chart=new Chart(ctx,{
-    type:'line',
-    plugins:[ChartDataLabels],
-    data:{
-      labels:days.map(d=>d.toString()),
-      datasets:[{
-        label:'Habits Completed',
-        data:data,
-        fill:true,
-        backgroundColor:'rgba(142,36,170,0.2)',
-        borderColor:'#8e24aa',
-        tension:0.3,
-        pointRadius:6,
-        pointBackgroundColor:pointBg,
-        pointHoverRadius:8,
-        pointHoverBackgroundColor:pointBg,
-        pointStyle:'circle',
-        pointBorderWidth:0,
-        datalabels:{ align:'top', color:'#4a148c', font:{weight:'bold',size:12} }
+simranChart = renderLineChart(
+  "simranChart",
+  simranChart,
+  simranHours,
+  null,
+  "#1565c0",
+  v => (v > 0 ? v.toFixed(1) : "") // ✅ show hours
+);
+
+
+  jaapChart = renderLineChart(
+    "jaapChart",
+    jaapChart,
+    jaapCounts,
+    null,
+    "#2e7d32",
+    v => (v > 0 ? v.toLocaleString() : "")
+  );
+}
+
+function renderLineChart(canvasId, chartRef, data, maxY, color, formatter) {
+  const ctx = document.getElementById(canvasId).getContext("2d");
+  if (chartRef) chartRef.destroy();
+
+  return new Chart(ctx, {
+    type: "line",
+    plugins: [ChartDataLabels],  // Ensure the plugin is being used
+    data: {
+      labels: data.map((_, i) => i + 1),
+      datasets: [{
+        data,
+        borderColor: color,
+        backgroundColor: color + "33",  // Set the chart background color
+        tension: 0.3,  // For smooth curves
+        fill: true,  // Fill the area under the line
+        pointRadius: 5,  // Make the points visible
+        datalabels: {
+          display: true,  // Ensure labels are shown
+          align: "end",  // Positioning the labels above the points
+	  offset: 4,
+          color: color,  // Text color of the labels
+          font: { weight: "bold", size: 11 },  // Font style for labels
+          formatter: formatter,  // Use the formatter function passed in
+        }
       }]
     },
-    options:{
-      responsive:true,
-      maintainAspectRatio:false,
-      layout:{ padding:{ top:35 } },
-      scales:{
-        y:{ display:false, beginAtZero:true, max:7 },
-        x:{ 
-          ticks:{ 
-            autoSkip:false,      // show all labels
-            font:{ size:10 }     // smaller font to fit
-          } 
-        }
-      },
-      plugins:{ legend:{display:false}, tooltip:{enabled:false} },
-      elements: { line:{borderWidth:2}, point:{radius:6, hoverRadius:8} }
+options: {
+  responsive: true,
+  maintainAspectRatio: false,
+  layout: {
+    padding: {
+      top: 22   // ✅ prevents label cut-off
     }
+  },
+  plugins: {
+    legend: { display: false },
+    tooltip: { enabled: false },
+    datalabels: {
+      clip: false   // ✅ allow labels outside chart area
+    }
+  },
+  scales: {
+x: {
+    ticks: {
+      autoSkip: false,   // ✅ show every day
+      maxRotation: 0,
+      minRotation: 0,
+      font: { size: 10 }
+    }
+  },
+    y: {
+      beginAtZero: true,
+      max: maxY || undefined,
+      display: false
+    }
+  }
+}
+
   });
+}
+
+function toggleChart(chartId, btn) {
+  const chartContainer = document.getElementById(chartId + "Container");
+
+  if (chartContainer.style.display === "none") {
+    chartContainer.style.display = "block";
+    btn.textContent = "▲";
+  } else {
+    chartContainer.style.display = "none";
+    btn.textContent = "▼";
+  }
+}
+
+
+const translations = {
+  pa: {
+    headerLine1: "ਸਤਿਗੁਰ ਸੇਤੀ ਰਤਿਆ ਦਰਗਹ ਪਾਈਐ ਠਾਉ ॥",
+    headerTitle: "ਅਧਿਆਤਮਿਕ ਨਿਯਮ - ਰੋਜ਼ਾਨਾ ਸਵੈਪੜਚੋਲ",
+    todayBtn: "ਅੱਜ ਦੀ ਤਰੀਕ ਤੇ ਜਾਓ",
+    toggleMonth: "ਮਹੀਨਾਵਾਰ ਦਰਸ਼ਨ",
+    footerText: "ਵਾਹਿਗੁਰੂ ਵਾਹਿਗੁਰੂ ਵਾਹਿਗੁਰੂ ਵਾਹਿਗੁਰੂ ਵਾਹਿਗੁਰੂ ਵਾਹਿਗੁਰੂ",
+labels: {
+  hours: "ਘੰਟੇ",
+  minutes: "ਮਿੰਟ",
+  jaap: "ਕਾਉਂਟਰ ਜਾਪ ਦੀ ਗਿਣਤੀ"
+},
+  chartTitles: {
+    habits: "ਪੂਰੇ ਕੀਤੇ ਨਿਯਮ",
+    simran: "ਸਿਮਰਨ ਸਮਾਂ (ਘੰਟੇ)",
+    jaap: "ਜਾਪ ਦੀ ਗਿਣਤੀ"
+  },
+monthTitle: "ਮਹੀਨਾਵਾਰ ਦਰਸ਼ਨ",
+    habits: [
+"ਕੀ ਮੈਂ ਅੱਜ ਬਾਣੀ ਵਿਚਾਰ ਵਿਚਾਰ ਕੇ ਪੜ੍ਹੀ ਹੈ ? (ਸਮਝਣ ਦੇ ਮਨੋਰਥ ਲਈ)",
+"ਕੀ ਮੈਂ ਅੱਜ ਸੰਗਤ ਕੀਤੀ ਹੈ ? (ਗਿਆਨ ਪ੍ਰਾਪਤ ਕਰਨ ਲਈ)",
+"ਕੀ ਅੱਜ ਮੇਰਾ ਮਨ ਸੰਸਾਰ ਅੰਦਰ ਸਾਵਧਾਨ ਹੋ ਕੇ ਵਿਚਰਿਆ ? (ਬਿੱਬਰਜਿਤ ਕਰਮਾਂ ਤੋਂ ਬਚਣ ਲਈ)",
+"ਕੀ ਮੈਂ ਅੱਜ ਇਕਾਂਤ ਸਿਮਰਨ ਦੀ ਹਾਜ਼ਰੀ ਲਗਾਈ ਹੈ? (ਘੱਟੋ ਘੱਟ 1 ਘੰਟੇ ਦੀ)",
+"ਕੀ ਮੈਂ ਅੱਜ ਤੁਰਦੇ ਫਿਰਦੇ ਵਾਹਿਗੁਰੂ ਦਾ ਜਾਪ ਕੀਤਾ ? (ਮਨ ਨੂ ਵਿਚਾਰਾਂ ਦੀ ਮੈਲ ਲੱਗਣ ਤੋਂ ਬਚਾਉਣ ਲਈ)",
+"ਕੀ ਮੈਂ ਅੱਜ ਅਨਹਦ ਸ਼ਬਦਾਂ ਨੂ ਏਕਾਂਤ ਵਿੱਚ ਬੈਠ ਕੇ ਸੁਣਿਆ? (ਸੁਰਤ ਨੂ ਸ਼ਬਦ ਨਾਲ ਜੋੜਨ ਲਈ)",
+"ਕੀ ਮੈਂ ਅੱਜ ਏਕਾਂਤ ਵਿੱਚ ਬੈਠ ਕੇ ਸਾਹਮਣੇ ਸੁੰਨ ਵਿੱਚ ਦੇਖਣ ਦੀ ਕੋਸ਼ਿਸ਼ ਕੀਤੀ? (ਪ੍ਰਕਾਸ਼ ਰੂਪ ਪਰਮਾਤਮਾ ਦੇ ਦਰਸ਼ਨ ਕਰਨ ਲਈ)"
+    ]
+  },
+
+  hi: {
+    headerLine1: "सतिगुर सेती रतिया दरगह पाइए ठाऊ ॥",
+    headerTitle: "आध्यात्मिक नियम – दैनिक आत्म निरीक्षण",
+    todayBtn: "आज की तारीख पर जाओ",
+    toggleMonth: "मासिक दृश्य",
+    footerText: "वाहेगुरु वाहेगुरु वाहेगुरु वाहेगुरु वाहेगुरु वाहेगुरु",
+labels: {
+  hours: "घंटे",
+  minutes: "मिनट",
+  jaap: "काउंटर जाप की गिनती"
+},
+  chartTitles: {
+    habits: "पूरे किए नियम",
+    simran: "स्मरण समय (घंटे)",
+    jaap: "जप की गिनती"
+  },
+ monthTitle: "मासिक दृश्य",
+    habits: [
+"क्या मैंने आज बाणी विचार विचार कर पढ़ी है? (समझने के उद्देश्य से)",
+"क्या मैंने आज संगत की है? (ज्ञान प्राप्त करने के लिए)",
+"क्या आज मेरा मन संसार में सावधान होकर विचरित हुआ? (बिबरजीत कर्मों से बचने के लिए)",
+"क्या मैंने आज एकान्त स्मरण की हाज़िरी लगाई है? (कम से कम 1 घंटे की)",
+"क्या मैंने आज चलते-फिरते वहिगुरु का जाप किया? (मन को विचारों की मैल लगने से बचाने के लिए)",
+"क्या मैंने आज अनहद शब्दों को एकान्त में बैठकर सुना? (सूरत को शब्द से जोड़ने के लिए)",
+"क्या मैंने आज एकान्त में बैठकर सामने सुन में देखने की कोशिश की? (प्रकाश रूप परमात्मा के दर्शन के लिए)"
+    ]
+  },
+
+  en: {
+    headerLine1: "ਸਤਿਗੁਰ ਸੇਤੀ ਰਤਿਆ ਦਰਗਹ ਪਾਈਐ ਠਾਉ ॥ (Absorbed in the True Guru, one finds a place in the Divine Court)",
+    headerTitle: "Adheyatamak Rules – Daily Self Checklist",
+    todayBtn: "Go To Today's Date",
+    toggleMonth: "Monthly View",
+    footerText: "Waheguru Waheguru Waheguru Waheguru Waheguru Waheguru",
+labels: {
+  hours: "Hours",
+  minutes: "Minutes",
+  jaap: "Jaap Counter"
+},
+chartTitles: {
+  habits: "Rules Completed",
+  simran: "Simran Time (Hours)",
+  jaap: "Jaap Count"
+},
+monthTitle: "Monthly View",
+    habits: [
+"Did I read and contemplate the Bani thoughtfully today (for the purpose of understanding)?",
+"Did I connect with the sangat today? (to gain Gurmat knowledge)",
+"Did my mind wander carefully in the world today? (To avoid accruing wrongful actions)",
+"Did I practice solitary meditation (ekaant simran) today? (At least for 1 hour)",
+"Did I chant Waheguru today while walking around? (To protect the mind from getting polluted with thoughts)",
+"Did I sit in solitude today and listen to the Anhad words? (To connect the consciousness with the Naam)",
+"Did I sit in solitude and try to see the void before me today? (To experience the divine in the form of light)"
+    ]
+  }
+};
+
+function applyLanguage(lang) {
+  const t = translations[lang];
+  localStorage.setItem("lang", lang);
+
+document.documentElement.lang = lang;
+
+
+  // Header
+  document.getElementById("headerLine1").textContent = t.headerLine1;
+  document.getElementById("headerTitle").textContent = t.headerTitle;
+  document.getElementById("todayBtn").textContent = t.todayBtn;
+  document.getElementById("toggleMonth").textContent = t.toggleMonth;
+  document.getElementById("footerText").textContent = t.footerText;
+  document.getElementById("monthTitle").textContent = t.monthTitle;
+
+  // Chart titles
+  document.getElementById("chartTitleHabits").textContent = t.chartTitles.habits;
+  document.getElementById("chartTitleSimran").textContent = t.chartTitles.simran;
+  document.getElementById("chartTitleJaap").textContent = t.chartTitles.jaap;
+
+  // Habit text
+  t.habits.forEach((text, i) => {
+    const el = document.getElementById(`habit-${i}`);
+    if (el) el.textContent = text;
+  });
+
+  // Input labels
+ document.querySelectorAll(".label-hours").forEach(el => {
+  el.textContent = t.labels.hours;
+});
+
+document.querySelectorAll(".label-minutes").forEach(el => {
+  el.textContent = t.labels.minutes;
+});
+
+document.querySelectorAll(".label-jaap").forEach(el => {
+  el.textContent = t.labels.jaap;
+});
+
+
 }
 
 loadDay();
 buildMonth();
 updateChart();
+
+// 🔧 Language initialization (FIX)
+const savedLang = localStorage.getItem("lang") || "pa";
+applyLanguage(savedLang);
+
+const languageSelect = document.getElementById("languageSelect");
+if (languageSelect) {
+  languageSelect.value = savedLang;
+  languageSelect.onchange = e => {
+    applyLanguage(e.target.value);
+  };
+}
+
 </script>
 </body>
 </html>
-
 
