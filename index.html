@@ -389,6 +389,21 @@ animation: blessing 0.35s ease-out;
 .simran-row {
   display: flex;
   gap: 12px;
+  margin-bottom: 12px;
+}
+
+.simran-row .input-group {
+  flex: 1;
+}
+
+.add-simran-btn {
+  background: #ede7f6;
+  border: 1px solid #d1c4e9;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 800;
+  color: #4a148c;
+  cursor: pointer;
 }
 
 .simran-col {
@@ -519,7 +534,42 @@ padding-bottom: 12px;
   box-shadow: 0 0 10px rgba(142,36,170,0.4);
 }
 
+/* Remove background for all simran rows */
+.simran-sessions .simran-row {
+  background: transparent;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: flex-start; /* default for new sittings */
+  margin-bottom: 10px;
+}
 
+/* Center only the first sitting */
+.simran-sessions .simran-row:first-child {
+  justify-content: center;
+}
+
+/* Input group style for uniform padding */
+.simran-sessions .simran-row .input-group {
+  background: #ede7f6;
+  padding: 6px 10px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Delete button style: just icon, right-aligned */
+.simran-sessions .simran-row .delete-sitting-btn {
+  background: none;
+  color: #b71c1c;
+  padding: 0;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  margin: 4px auto 0 auto; /* top margin, horizontally centered */
+  display: block;          /* makes margin:auto work */
+}
 
 footer {
   width:100%;
@@ -765,24 +815,11 @@ document.getElementById("checklist").innerHTML = habitKeys.map((key,i)=>`
 
 ${i===3 ? `
 <div class="simran-block" data-habit="3">
-  <div class="simran-row">
-<div class="simran-col input-group">
- <label class="input-label label-hours"></label>
-  <select class="simran-hours">
+  <div class="simran-sessions"></div>
 
-        ${Array.from({length:13},(_,i)=>`<option value="${i}">${i}</option>`).join("")}
-      </select>
-    </div>
-
-<div class="simran-col input-group">
-  <label class="input-label label-minutes"></label>
-  <select class="simran-minutes">
-
-        ${Array.from({length:12},(_,i)=>i*5)
-          .map(v=>`<option value="${v}">${v}</option>`).join("")}
-      </select>
-    </div>
-  </div>
+  <button type="button" class="add-simran-btn">
+    + Add Sitting
+  </button>
 </div>
 
 ` : ""}
@@ -808,135 +845,184 @@ ${i===4 ? `
 `).join("");
 
 
-function loadDay(){
+function loadDay() {
   document.getElementById("dateDisplay").textContent = format(currentDate);
-  const all=JSON.parse(localStorage.getItem(STORAGE))||{};
-  const day=all[dateKey(currentDate)]||{ checks:{} };
-  const today=new Date();
+  const all = JSON.parse(localStorage.getItem(STORAGE)) || {};
+  const day = all[dateKey(currentDate)] || { checks: {} };
+  const today = new Date();
 
-document.querySelectorAll("#checklist input[type='checkbox']").forEach(cb=>{
-  const index = cb.dataset.index;
+  // ✅ Checkbox states and toggle input blocks
+  document.querySelectorAll("#checklist input[type='checkbox']").forEach(cb => {
+    const index = cb.dataset.index;
 
-  cb.checked = day.checks?.[index] || false;
-  cb.disabled = dateKey(currentDate) > dateKey(today);
+    cb.checked = day.checks?.[index] || false;
+    cb.disabled = dateKey(currentDate) > dateKey(today);
 
-  // 🔹 Habit 4 input block toggle
-if(index == 3){
-  const block = document.querySelector('.simran-block[data-habit="3"]');
-    if(block){
-      block.style.display = cb.checked ? "block" : "none";
-block.querySelectorAll("select").forEach(s => {
-  s.disabled = !cb.checked;
-});
+    // Habit 4 – Simran block toggle
+    if (index == 3) {
+      const block = document.querySelector('.simran-block[data-habit="3"]');
+      if (block) {
+        block.style.display = cb.checked ? "block" : "none";
+        // enable/disable button
+        const btn = block.querySelector(".add-simran-btn");
+        if (btn) btn.disabled = !cb.checked;
+      }
     }
+
+    // Habit 5 – Jaap block toggle
+    if (index == 4) {
+      const block = cb.closest(".habit-block").querySelector(".jaap-block");
+      const select = block.querySelector(".jaap-count");
+
+      block.style.display = cb.checked ? "block" : "none";
+      select.disabled = !cb.checked || dateKey(currentDate) > dateKey(today);
+      select.value = day.jaapCount ?? "0";
+
+      select.onchange = () => {
+        day.jaapCount = select.value || undefined;
+        all[dateKey(currentDate)] = day;
+        localStorage.setItem(STORAGE, JSON.stringify(all));
+        updateChart();
+      };
+    }
+
+    cb.onchange = () => {
+      day.checks = day.checks || {};
+      day.checks[index] = cb.checked;
+
+      // Habit 4 – Simran live toggle
+      if (index == 3) {
+        const block = document.querySelector('.simran-block[data-habit="3"]');
+        if (block) {
+          block.style.display = cb.checked ? "block" : "none";
+          const btn = block.querySelector(".add-simran-btn");
+          if (btn) btn.disabled = !cb.checked;
+
+          if (!cb.checked) day.simranSessions = [];
+        }
+      }
+
+      // Habit 5 – Jaap live toggle
+      if (index == 4) {
+        const block = cb.closest(".habit-block").querySelector(".jaap-block");
+        const select = block.querySelector(".jaap-count");
+
+        block.style.display = cb.checked ? "block" : "none";
+        select.disabled = !cb.checked;
+
+        if (!cb.checked) {
+          select.value = "0";
+          delete day.jaapCount;
+        }
+      }
+
+      all[dateKey(currentDate)] = day;
+      localStorage.setItem(STORAGE, JSON.stringify(all));
+      buildMonth();
+      updateChart();
+    };
+  });
+
+// Habit 4 – Simran rendering & Add Sitting button
+const addBtn = document.querySelector(".add-simran-btn");
+if (addBtn) {
+  addBtn.onclick = () => {
+    const all = JSON.parse(localStorage.getItem(STORAGE)) || {};
+    const day = all[dateKey(currentDate)] || {};
+    if (!Array.isArray(day.simranSessions)) day.simranSessions = [];
+    day.simranSessions.push({ hours: 0, minutes: 0 });
+    all[dateKey(currentDate)] = day;
+    localStorage.setItem(STORAGE, JSON.stringify(all));
+    renderSimran();
+  };
+}
+
+renderSimran(); // render the rows after checkbox state is set
+}
+
+
+function renderSimran() {
+  const simranContainer = document.querySelector(".simran-sessions");
+  if (!simranContainer) return;
+
+  const all = JSON.parse(localStorage.getItem(STORAGE)) || {};
+  const day = all[dateKey(currentDate)] || {};
+  const lang = document.documentElement.lang || "en";
+
+  if (!Array.isArray(day.simranSessions)) day.simranSessions = [];
+
+  // Ensure at least one sitting exists
+  if (day.simranSessions.length === 0) {
+    day.simranSessions.push({ hours: 0, minutes: 0 });
   }
 
-// 🔹 Habit 5 – Jaap counter toggle (LOAD)
-if(index == 4){
-  const block = cb.closest(".habit-block").querySelector(".jaap-block");
-  const select = block.querySelector(".jaap-count");
+  simranContainer.innerHTML = "";
 
-// show / hide
-block.style.display = cb.checked ? "block" : "none";
+  day.simranSessions.forEach((s, i) => {
+    const row = document.createElement("div");
+    row.className = "simran-row";
 
-// disable for unchecked OR future dates
-select.disabled = !cb.checked || dateKey(currentDate) > dateKey(today);
+   row.innerHTML = `
+  <div class="input-group">
+    <label class="input-label label-sitting">${translations[lang].labels.sitting} ${i+1}</label>
+  </div>
+  <div class="input-group">
+    <label class="input-label label-hours">${translations[lang].labels.hours}</label>
+    <select>${Array.from({ length: 13 }, (_, h) => `<option value="${h}" ${h === s.hours ? "selected" : ""}>${h}</option>`).join("")}</select>
+  </div>
+  <div class="input-group">
+    <label class="input-label label-minutes">${translations[lang].labels.minutes}</label>
+    <select>${Array.from({ length: 12 }, (_, m) => m*5).map(v => `<option value="${v}" ${v === s.minutes ? "selected" : ""}>${v}</option>`).join("")}</select>
+  </div>
+  ${i > 0 ? `<button class="delete-sitting-btn">❌</button>` : ""}
+`;
 
-// restore saved value
-select.value = day.jaapCount ?? "0";
+    const [hSel, mSel] = row.querySelectorAll("select");
 
+    // Update hours/minutes
+    hSel.onchange = mSel.onchange = () => {
+      s.hours = +hSel.value;
+      s.minutes = +mSel.value;
+      all[dateKey(currentDate)] = day;
+      localStorage.setItem(STORAGE, JSON.stringify(all));
+      updateChart();
+    };
 
-// save on change
-select.onchange = () => {
-  if (select.value) {
-    day.jaapCount = select.value;
-  } else {
-    delete day.jaapCount;
-  }
+    // Delete sitting (only for i > 0)
+    const deleteBtn = row.querySelector(".delete-sitting-btn");
+    if (deleteBtn) {
+      deleteBtn.onclick = () => {
+        day.simranSessions.splice(i, 1);
+        all[dateKey(currentDate)] = day;
+        localStorage.setItem(STORAGE, JSON.stringify(all));
+        renderSimran(); // re-render to update numbers
+        updateChart();
+      };
+    }
+
+    simranContainer.appendChild(row);
+  });
+
   all[dateKey(currentDate)] = day;
   localStorage.setItem(STORAGE, JSON.stringify(all));
-
-  updateChart(); // ✅ LIVE update
-};
-
 }
 
+// Add Sitting button – automatically labels next sitting
+const addBtn = document.querySelector(".add-simran-btn");
+if (addBtn) {
+  addBtn.onclick = () => {
+    const all = JSON.parse(localStorage.getItem(STORAGE)) || {};
+    const day = all[dateKey(currentDate)] || {};
+    if (!Array.isArray(day.simranSessions)) day.simranSessions = [];
 
-  cb.onchange = () => {
-    day.checks = day.checks || {};
-    day.checks[index] = cb.checked;
-
-    // Toggle inputs live
-if(index == 3){
-  const block = document.querySelector('.simran-block[data-habit="3"]');
-  if(block){
-    const h = block.querySelector(".simran-hours");
-    const m = block.querySelector(".simran-minutes");
-
-    block.style.display = cb.checked ? "block" : "none";
-    h.disabled = !cb.checked;
-    m.disabled = !cb.checked;
-
-    if(!cb.checked){
-      // 🔥 RESET VALUES
-      h.value = "0";
-      m.value = "0";
-      delete day.simran;
-    }
-  }
-}
-
-    // 🔹 Habit 5 – Jaap counter LIVE toggle
-if(index == 4){
-  const block = cb.closest(".habit-block").querySelector(".jaap-block");
-  const select = block.querySelector(".jaap-count");
-
-  block.style.display = cb.checked ? "block" : "none";
-  select.disabled = !cb.checked;
-
-  if(!cb.checked){
-    // 🔥 RESET VALUE
-    select.value = "0";
-    delete day.jaapCount;
-  }
-}
-
+    // Push a new sitting
+    day.simranSessions.push({ hours: 0, minutes: 0 });
 
     all[dateKey(currentDate)] = day;
     localStorage.setItem(STORAGE, JSON.stringify(all));
-    buildMonth();
+    renderSimran(); // re-render will update numbering
     updateChart();
   };
-});
-
-
-// Habit 4 – Simran time
-const h = document.querySelector(".simran-hours");
-const m = document.querySelector(".simran-minutes");
-if(h && m){
-  h.value = day.simran && day.simran.hours !== undefined ? day.simran.hours : "0";
-  m.value = day.simran && day.simran.minutes !== undefined ? day.simran.minutes : "0";
-
-  const isFuture = dateKey(currentDate) > dateKey(today);
-  h.disabled = isFuture;
-  m.disabled = isFuture;
-h.oninput = m.oninput = () => {
-  if (!day.checks?.[3]) return;
-
-  day.simran = {
-    hours: h.value,
-    minutes: m.value
-  };
-
-  all[dateKey(currentDate)] = day;
-  localStorage.setItem(STORAGE, JSON.stringify(all));
-
-  updateChart(); // ✅ LIVE update
-};
-
-
-
-}
 }
 
 function buildMonth(){
@@ -958,7 +1044,12 @@ function buildMonth(){
     const doneCount=Object.values(data.checks||{}).filter(v=>v).length;
 // Simran hours
 let simranTotal = 0;
-if (data.simran) {
+
+if (data.simranSessions) {
+  simranTotal = data.simranSessions.reduce(
+    (t, s) => t + s.hours + s.minutes / 60, 0
+  );
+} else if (data.simran) {
   simranTotal =
     (+data.simran.hours || 0) +
     ((+data.simran.minutes || 0) / 60);
@@ -1099,13 +1190,20 @@ function updateChart() {
 
 const simranHours = days.map(d => {
   const val = all[dateKey(new Date(y, m, d))];
-  if (!val?.simran) return 0;
-  return (
-    (+val.simran.hours || 0) +
-    ((+val.simran.minutes || 0) / 60)
-  );
-});
 
+  if (val?.simranSessions) {
+    return val.simranSessions.reduce(
+      (t, s) => t + s.hours + s.minutes / 60, 0
+    );
+  }
+
+  if (val?.simran) {
+    return (+val.simran.hours || 0) +
+           ((+val.simran.minutes || 0) / 60);
+  }
+
+  return 0;
+});
 
   const jaapCounts = days.map(d => {
     const val = all[dateKey(new Date(y, m, d))];
@@ -1223,6 +1321,7 @@ const translations = {
     toggleMonth: "ਮਹੀਨਾਵਾਰ ਦਰਸ਼ਨ",
     footerText: "ਵਾਹਿਗੁਰੂ ਵਾਹਿਗੁਰੂ ਵਾਹਿਗੁਰੂ ਵਾਹਿਗੁਰੂ ਵਾਹਿਗੁਰੂ ਵਾਹਿਗੁਰੂ",
 labels: {
+  sitting: "ਬੈਠਕ",
   hours: "ਘੰਟੇ",
   minutes: "ਮਿੰਟ",
   jaap: "ਕਾਉਂਟਰ ਜਾਪ ਦੀ ਗਿਣਤੀ"
@@ -1251,6 +1350,7 @@ monthTitle: "ਮਹੀਨਾਵਾਰ ਦਰਸ਼ਨ",
     toggleMonth: "मासिक दृश्य",
     footerText: "वाहेगुरु वाहेगुरु वाहेगुरु वाहेगुरु वाहेगुरु वाहेगुरु",
 labels: {
+  sitting: "बैठक",
   hours: "घंटे",
   minutes: "मिनट",
   jaap: "काउंटर जाप की गिनती"
@@ -1279,6 +1379,7 @@ labels: {
     toggleMonth: "Monthly View",
     footerText: "Waheguru Waheguru Waheguru Waheguru Waheguru Waheguru",
 labels: {
+  sitting: "Sitting",
   hours: "Hours",
   minutes: "Minutes",
   jaap: "Jaap Counter"
@@ -1336,6 +1437,16 @@ document.querySelectorAll(".label-minutes").forEach(el => {
   el.textContent = t.labels.minutes;
 });
 
+document.querySelectorAll(".simran-row").forEach((row, i) => {
+  const sittingLabel = row.querySelector(".label-sitting");
+  const hoursLabel = row.querySelector(".label-hours");
+  const minutesLabel = row.querySelector(".label-minutes");
+
+  if (sittingLabel) sittingLabel.textContent = `${t.labels.sitting} ${i + 1}`;
+  if (hoursLabel) hoursLabel.textContent = t.labels.hours;
+  if (minutesLabel) minutesLabel.textContent = t.labels.minutes;
+});
+
 document.querySelectorAll(".label-jaap").forEach(el => {
   el.textContent = t.labels.jaap;
 });
@@ -1364,4 +1475,3 @@ if (languageSelect) {
 </script>
 </body>
 </html>
-
