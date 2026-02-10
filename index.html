@@ -765,12 +765,15 @@ const monthNames = {
 // Auto-update at local midnight
 setInterval(() => { 
   const now = new Date();
-  if (dateKey(now) !== dateKey(currentDate)) {
-    currentDate = now;
+  const todayKey = dateKey(now);
+  const viewingKey = dateKey(currentDate);
+
+  // Only auto-refresh IF user is already viewing today
+  if (viewingKey === todayKey) {
     loadDay();
     updateChart();
   }
-}, 60 * 1000); // checks every minute
+}, 60 * 1000);
 
 
 function dateKey(d){
@@ -848,7 +851,11 @@ ${i===4 ? `
 function loadDay() {
   document.getElementById("dateDisplay").textContent = format(currentDate);
   const all = JSON.parse(localStorage.getItem(STORAGE)) || {};
-  const day = all[dateKey(currentDate)] || { checks: {} };
+const dayKey = dateKey(currentDate);
+const day = all[dayKey] ?? {};
+
+day.checks ??= {};
+day.simranSessions ??= [];
   const today = new Date();
 
   // ✅ Checkbox states and toggle input blocks
@@ -892,15 +899,24 @@ function loadDay() {
 
       // Habit 4 – Simran live toggle
       if (index == 3) {
-        const block = document.querySelector('.simran-block[data-habit="3"]');
-        if (block) {
-          block.style.display = cb.checked ? "block" : "none";
-          const btn = block.querySelector(".add-simran-btn");
-          if (btn) btn.disabled = !cb.checked;
+  const block = document.querySelector('.simran-block[data-habit="3"]');
+  if (block) {
+    block.style.display = cb.checked ? "block" : "none";
+    const btn = block.querySelector(".add-simran-btn");
+    if (btn) btn.disabled = !cb.checked;
 
-          if (!cb.checked) day.simranSessions = [];
-        }
-      }
+if (
+  cb.checked &&
+  (!Array.isArray(day.simranSessions) || day.simranSessions.length === 0)
+) {
+  day.simranSessions = [{ hours: 0, minutes: 0 }];
+}
+
+    if (!cb.checked) {
+      day.simranSessions = [];
+    }
+  }
+}
 
       // Habit 5 – Jaap live toggle
       if (index == 4) {
@@ -934,6 +950,7 @@ if (addBtn) {
     all[dateKey(currentDate)] = day;
     localStorage.setItem(STORAGE, JSON.stringify(all));
     renderSimran();
+ updateChart(); // 
   };
 }
 
@@ -951,10 +968,6 @@ function renderSimran() {
 
   if (!Array.isArray(day.simranSessions)) day.simranSessions = [];
 
-  // Ensure at least one sitting exists
-  if (day.simranSessions.length === 0) {
-    day.simranSessions.push({ hours: 0, minutes: 0 });
-  }
 
   simranContainer.innerHTML = "";
 
@@ -1002,27 +1015,6 @@ function renderSimran() {
 
     simranContainer.appendChild(row);
   });
-
-  all[dateKey(currentDate)] = day;
-  localStorage.setItem(STORAGE, JSON.stringify(all));
-}
-
-// Add Sitting button – automatically labels next sitting
-const addBtn = document.querySelector(".add-simran-btn");
-if (addBtn) {
-  addBtn.onclick = () => {
-    const all = JSON.parse(localStorage.getItem(STORAGE)) || {};
-    const day = all[dateKey(currentDate)] || {};
-    if (!Array.isArray(day.simranSessions)) day.simranSessions = [];
-
-    // Push a new sitting
-    day.simranSessions.push({ hours: 0, minutes: 0 });
-
-    all[dateKey(currentDate)] = day;
-    localStorage.setItem(STORAGE, JSON.stringify(all));
-    renderSimran(); // re-render will update numbering
-    updateChart();
-  };
 }
 
 function buildMonth(){
@@ -1475,3 +1467,4 @@ if (languageSelect) {
 </script>
 </body>
 </html>
+ 
