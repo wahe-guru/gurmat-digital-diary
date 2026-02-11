@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="pa">
 <head>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gurmat Digital Diary</title>
@@ -1557,6 +1560,19 @@ document.getElementById("languageSelect").onchange = (e) => {
   document.documentElement.lang = lang;
   applyLanguage(lang);
 };
+
+// Register the Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js')
+    .then(() => console.log("Service Worker Registered"));
+}
+
+// Ask the phone to NEVER delete the diary data
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist().then(persistent => {
+    if (persistent) console.log("Storage will not be cleared.");
+  });
+}
 
 </script>
 </body>
