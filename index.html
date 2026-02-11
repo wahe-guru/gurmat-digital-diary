@@ -743,7 +743,67 @@ button:focus {
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 <script>
-const STORAGE = "spiritualChecklist";
+// ✅ IndexedDB setup
+const DB_NAME = "spiritualDiaryDB";
+const DB_VERSION = 1;
+const STORE_NAME = "days";
+
+let db;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "date" });
+      }
+    };
+
+    request.onsuccess = (e) => {
+      db = e.target.result;
+      resolve(db);
+    };
+
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function getDay(dateKey) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.get(dateKey);
+    req.onsuccess = () => resolve(req.result?.data || {});
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function saveDay(dateKey, data) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.put({ date: dateKey, data });
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function getAllDays() {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.getAll();
+    req.onsuccess = () => {
+      const obj = {};
+      req.result.forEach(item => obj[item.date] = item.data);
+      resolve(obj);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
 let currentDate = new Date(); // uses local time
 
 const translations = {
@@ -939,25 +999,29 @@ ${i===4 ? `
 `).join("");
 
 
-function loadDay() {
+async function loadDay() {
+  await openDB(); // ensure DB is ready
   document.getElementById("dateDisplay").textContent = format(currentDate);
-  const all = JSON.parse(localStorage.getItem(STORAGE)) || {};
-const dayKey = dateKey(currentDate);
-const day = all[dayKey] ?? {};
+  const dayKeyStr = dateKey(currentDate);
+  const all = await getAllDays(); // get all days
+  const day = all[dayKeyStr] || {};
 
-day.checks ??= {};
-
-// 🔑 GUARANTEE Sitting 1 if Habit 4 is checked
-if (day.checks[3]) {
-  if (!Array.isArray(day.simranSessions)) day.simranSessions = [];
-
-  // ✅ Only add Sitting 1 if simranSessions is empty
-  if (day.simranSessions.length === 0) {
-    day.simranSessions.push({ hours: 0, minutes: 0 });
+  day.checks ??= {};
+  
+  // Logic for Habit 4 (Simran) data initialization
+  if (day.checks[3]) {
+    if (!Array.isArray(day.simranSessions)) {
+      day.simranSessions = [];
+    }
+    // Only push a default sitting if the list is totally empty
+    if (day.simranSessions.length === 0) {
+      day.simranSessions.push({ hours: 0, minutes: 0 });
+      // Save immediately so the UI and DB are in sync
+      await saveDay(dayKeyStr, day);
+    }
+  } else {
+    day.simranSessions = [];
   }
-} else {
-  day.simranSessions = [];
-}
 
   const today = new Date();
 
@@ -968,220 +1032,211 @@ if (day.checks[3]) {
     cb.checked = day.checks?.[index] || false;
     cb.disabled = dateKey(currentDate) > dateKey(today);
 
-// Habit 4 – Simran block toggle (initial load)
-if (index == 3) {
-  const block = document.querySelector('.simran-block[data-habit="3"]');
-  const btn = block?.querySelector(".add-simran-btn");
+    // Habit 4 – Simran block toggle (initial load)
+    if (index == 3) {
+      const block = document.querySelector('.simran-block[data-habit="3"]');
+      const btn = block?.querySelector(".add-simran-btn");
 
-  if (block) {
-    block.style.display = cb.checked ? "block" : "none";
-    if (btn) btn.disabled = !cb.checked;
-  }
-}
+      if (block) {
+        block.style.display = cb.checked ? "block" : "none";
+        if (btn) btn.disabled = !cb.checked;
+      }
+    }
 
-// Habit 5 – Jaap block toggle (initial load)
-if (index == 4) {
-  const block = document.querySelector('.jaap-block[data-habit="4"]');
-  const select = block?.querySelector(".jaap-count");
+    // Habit 5 – Jaap block toggle (initial load)
+    if (index == 4) {
+      const block = document.querySelector('.jaap-block[data-habit="4"]');
+      const select = block?.querySelector(".jaap-count");
 
-  if (block && select) {
-    block.style.display = cb.checked ? "block" : "none";
-    select.disabled = !cb.checked || dateKey(currentDate) > dateKey(today);
-    select.value = day.jaapCount ? +day.jaapCount : "0";
+      if (block && select) {
+        block.style.display = cb.checked ? "block" : "none";
+        select.disabled = !cb.checked || dateKey(currentDate) > dateKey(today);
+        select.value = day.jaapCount ? +day.jaapCount : "0";
 
-    select.onchange = () => {
-      day.jaapCount = select.value || undefined;
-      all[dateKey(currentDate)] = day;
-      localStorage.setItem(STORAGE, JSON.stringify(all));
+        select.onchange = async () => {
+          day.jaapCount = select.value || undefined;
+          await saveDay(dayKeyStr, day);
+          await updateChart();
+        };
+      }
+    }
+
+    cb.onchange = async () => {
+      day.checks = day.checks || {};
+      day.checks[index] = cb.checked;
+
+      if (index == 3) { // Habit 4 – Simran
+        const block = document.querySelector('.simran-block[data-habit="3"]');
+        const btn = block?.querySelector(".add-simran-btn");
+
+        if (!Array.isArray(day.simranSessions)) day.simranSessions = [];
+
+        if (cb.checked) {
+          // Add Sitting 1 only if it doesn't exist
+          if (day.simranSessions.length === 0) {
+            day.simranSessions.push({ hours: 0, minutes: 0 });
+          }
+        } else {
+          // Unchecked → remove all sittings
+          day.simranSessions = [];
+        }
+
+        if (block) {
+          block.style.display = cb.checked ? "block" : "none";
+          if (btn) btn.disabled = !cb.checked;
+        }
+
+        // ✅ Save before rendering
+        await saveDay(dayKeyStr, day);
+        await renderSimran();
+      }
+
+      // Habit 5 – Jaap
+      if (index == 4) {
+        const block = document.querySelector('.jaap-block[data-habit="4"]');
+        const select = block?.querySelector(".jaap-count");
+
+        if (!cb.checked) {
+          // ✅ reset jaap when unchecked
+          delete day.jaapCount;
+          if (select) select.value = "0";
+        }
+
+        if (block && select) {
+          block.style.display = cb.checked ? "block" : "none";
+          select.disabled = !cb.checked;
+        }
+      }
+
+      await saveDay(dayKeyStr, day);
+      buildMonth();
+      updateChart();
+    };
+  });
+
+  // Habit 4 – Simran rendering & Add Sitting button
+  const addBtn = document.querySelector(".add-simran-btn");
+  if (addBtn) {
+    addBtn.onclick = async () => {
+      // Use the 'day' object already in scope for this date
+      if (!Array.isArray(day.simranSessions)) day.simranSessions = [];
+      day.simranSessions.push({ hours: 0, minutes: 0 });
+      
+      await saveDay(dayKeyStr, day);
+      await renderSimran();
       updateChart();
     };
   }
+
+  await renderSimran(); // render the rows after checkbox state is set
 }
 
-cb.onchange = () => {
-  day.checks = day.checks || {};
-  day.checks[index] = cb.checked;
-
-  if (index == 3) { // Habit 4 – Simran
-    const block = document.querySelector('.simran-block[data-habit="3"]');
-    const btn = block?.querySelector(".add-simran-btn");
-
-    if (!Array.isArray(day.simranSessions)) day.simranSessions = [];
-
-    if (cb.checked) {
-      // Add Sitting 1 only if it doesn't exist
-      if (day.simranSessions.length === 0) {
-        day.simranSessions.push({ hours: 0, minutes: 0 });
-      }
-    } else {
-      // Unchecked → remove all sittings
-      day.simranSessions = [];
-    }
-
-    if (block) {
-      block.style.display = cb.checked ? "block" : "none";
-      if (btn) btn.disabled = !cb.checked;
-    }
-
-    // ✅ Save before rendering
-    all[dateKey(currentDate)] = day;
-    localStorage.setItem(STORAGE, JSON.stringify(all));
-
-    renderSimran();
-  }
-
-  // Habit 5 – Jaap
-if (index == 4) {
-  const block = document.querySelector('.jaap-block[data-habit="4"]');
-  const select = block?.querySelector(".jaap-count");
-
-  if (!cb.checked) {
-    // ✅ reset jaap when unchecked
-    delete day.jaapCount;
-    if (select) select.value = "0";
-  }
-
-  if (block && select) {
-    block.style.display = cb.checked ? "block" : "none";
-    select.disabled = !cb.checked;
-  }
-}
-
- all[dateKey(currentDate)] = day;
-  localStorage.setItem(STORAGE, JSON.stringify(all));
-  buildMonth();
-  updateChart();
-};
-        });
-
-// Habit 4 – Simran rendering & Add Sitting button
-const addBtn = document.querySelector(".add-simran-btn");
-if (addBtn) {
-addBtn.onclick = () => {
-  const all = JSON.parse(localStorage.getItem(STORAGE)) || {};
-  const day = all[dateKey(currentDate)] || {};
-
-  if (!Array.isArray(day.simranSessions)) day.simranSessions = [];
-
-  // ✅ Ensure Sitting 1 is never duplicated
-  day.simranSessions.push({ hours: 0, minutes: 0 });
-
-  all[dateKey(currentDate)] = day;
-  localStorage.setItem(STORAGE, JSON.stringify(all));
-
-  renderSimran();
-  updateChart();
-};
-}
-
-renderSimran(); // render the rows after checkbox state is set
-}
-
-
-function renderSimran() {
+async function renderSimran() {
+  await openDB();
   const simranContainer = document.querySelector(".simran-sessions");
   if (!simranContainer) return;
 
-  const all = JSON.parse(localStorage.getItem(STORAGE)) || {};
-  const day = all[dateKey(currentDate)] || {};
+  const dayKeyStr = dateKey(currentDate);
+  const all = await getAllDays();
+  const day = all[dayKeyStr] || {};
   const lang = document.documentElement.lang || "en";
 
   if (!Array.isArray(day.simranSessions)) day.simranSessions = [];
-
-
   simranContainer.innerHTML = "";
 
- day.simranSessions.forEach((s, i) => {
-  const row = document.createElement("div");
-  row.className = "simran-row";
+  day.simranSessions.forEach((s, i) => {
+    const row = document.createElement("div");
+    row.className = "simran-row";
 
-  row.innerHTML = `
-    <div class="input-group">
-      <label class="input-label label-sitting">${translations[lang].labels.sitting} ${i+1}</label>
-    </div>
-    <div class="input-group">
-      <label class="input-label label-hours">${translations[lang].labels.hours}</label>
-      <select>${Array.from({ length: 13 }, (_, h) => `<option value="${h}" ${h === s.hours ? "selected" : ""}>${h}</option>`).join("")}</select>
-    </div>
-    <div class="input-group">
-      <label class="input-label label-minutes">${translations[lang].labels.minutes}</label>
-      <select>${Array.from({ length: 12 }, (_, m) => m*5).map(v => `<option value="${v}" ${v === s.minutes ? "selected" : ""}>${v}</option>`).join("")}</select>
-    </div>
-    ${i > 0 ? `<button class="delete-sitting-btn">❌</button>` : ""}
-  `;
+    row.innerHTML = `
+      <div class="input-group">
+        <label class="input-label label-sitting">${translations[lang].labels.sitting} ${i+1}</label>
+      </div>
+      <div class="input-group">
+        <label class="input-label label-hours">${translations[lang].labels.hours}</label>
+        <select>${Array.from({ length: 13 }, (_, h) => `<option value="${h}" ${h === s.hours ? "selected" : ""}>${h}</option>`).join("")}</select>
+      </div>
+      <div class="input-group">
+        <label class="input-label label-minutes">${translations[lang].labels.minutes}</label>
+        <select>${Array.from({ length: 12 }, (_, m) => m*5).map(v => 
+          `<option value="${v}" ${v === s.minutes ? "selected" : ""}>${v}</option>`).join("")}</select>
+      </div>
+      ${i > 0 ? `<button class="delete-sitting-btn">❌</button>` : ""}
+    `;
 
-  if (i === 0) {
-    row.style.justifyContent = "center"; // Center Sitting 1
-  }
+    if (i === 0) {
+      row.style.justifyContent = "center"; 
+    }
 
-  const [hSel, mSel] = row.querySelectorAll("select");
-
-  // Update hours/minutes
-  hSel.onchange = mSel.onchange = () => {
-    s.hours = +hSel.value;
-    s.minutes = +mSel.value;
-    all[dateKey(currentDate)] = day;
-    localStorage.setItem(STORAGE, JSON.stringify(all));
-    updateChart();
-  };
-
-  // Delete button (only for i > 0)
-  const deleteBtn = row.querySelector(".delete-sitting-btn");
-  if (deleteBtn) {
-    deleteBtn.onclick = () => {
-      day.simranSessions.splice(i, 1);
-      all[dateKey(currentDate)] = day;
-      localStorage.setItem(STORAGE, JSON.stringify(all));
-      renderSimran(); // re-render to update numbers
+    const [hSel, mSel] = row.querySelectorAll("select");
+    
+    hSel.onchange = mSel.onchange = async () => {
+      s.hours = +hSel.value;
+      s.minutes = +mSel.value;
+      all[dayKeyStr] = day; // Use dayKeyStr for consistency
+      await saveDay(dayKeyStr, day);
       updateChart();
     };
-  }
 
-  simranContainer.appendChild(row);
-});
-  }
+    const deleteBtn = row.querySelector(".delete-sitting-btn");
+    if (deleteBtn) {
+      deleteBtn.onclick = async () => {
+        day.simranSessions.splice(i, 1);
+        all[dayKeyStr] = day;
+        await saveDay(dayKeyStr, day);
+        await renderSimran(); 
+        updateChart();
+      };
+    }
+    simranContainer.appendChild(row);
+  }); // Added missing closing brace for forEach
+} // Added missing closing brace for function
 
 function updateSimranLabels(lang) {
   const rows = document.querySelectorAll(".simran-row");
   rows.forEach((row, i) => {
-    row.querySelector(".label-sitting").textContent = `${translations[lang].labels.sitting} ${i+1}`;
-    row.querySelector(".label-hours").textContent = translations[lang].labels.hours;
-    row.querySelector(".label-minutes").textContent = translations[lang].labels.minutes;
+    const sitLabel = row.querySelector(".label-sitting");
+    const hrLabel = row.querySelector(".label-hours");
+    const minLabel = row.querySelector(".label-minutes");
+    
+    if(sitLabel) sitLabel.textContent = `${translations[lang].labels.sitting} ${i+1}`;
+    if(hrLabel) hrLabel.textContent = translations[lang].labels.hours;
+    if(minLabel) minLabel.textContent = translations[lang].labels.minutes;
   });
 }
 
-function buildMonth(){
-  const mv=document.getElementById("monthView");
-  const all=JSON.parse(localStorage.getItem(STORAGE))||{};
-  mv.innerHTML="<div class='month-grid'></div>";
-  const grid=mv.firstChild;
-  const y=currentDate.getFullYear(), m=currentDate.getMonth();
-  const first=new Date(y,m,1), last=new Date(y,m+1,0);
-  const today=new Date();
+async function buildMonth() {
+  await openDB();
+  const all = await getAllDays();  // ✅ get from IndexedDB
+  const mv = document.getElementById("monthView");
+  mv.innerHTML = "<div class='month-grid'></div>";
+  const grid = mv.firstChild;
 
-  for(let i=0;i<first.getDay();i++){
-    const empty=document.createElement("div");empty.className="day empty";grid.appendChild(empty);
+  const y = currentDate.getFullYear(),
+        m = currentDate.getMonth();
+  const first = new Date(y, m, 1),
+        last = new Date(y, m + 1, 0);
+  const today = new Date();
+
+  // empty days
+  for (let i = 0; i < first.getDay(); i++) {
+    const empty = document.createElement("div");
+    empty.className = "day empty";
+    grid.appendChild(empty);
   }
 
-  for(let d=1;d<=last.getDate();d++){
-    const date=new Date(y,m,d);
-    const data=all[dateKey(date)]||{};
-    const doneCount=Object.values(data.checks||{}).filter(v=>v).length;
-// Simran hours
-let simranTotal = 0;
+  // actual days
+  for (let d = 1; d <= last.getDate(); d++) {
+    const date = new Date(y, m, d);
+    const data = all[dateKey(date)] || {};
+    const doneCount = Object.values(data.checks || {}).filter(v => v).length;
 
-if (data.simranSessions) {
-  simranTotal = data.simranSessions.reduce(
-    (t, s) => t + s.hours + s.minutes / 60, 0
-  );
-} else if (data.simran) {
-  simranTotal =
-    (+data.simran.hours || 0) +
-    ((+data.simran.minutes || 0) / 60);
-}
+    let simranTotal = 0;
+    if (data.simranSessions) {
+      simranTotal = data.simranSessions.reduce((t, s) => t + s.hours + s.minutes/60, 0);
+    }
 
-// Jaap count
-const jaapTotal = +data.jaapCount || 0;
+    const jaapTotal = +data.jaapCount || 0;
 
     let bg="";
     if(doneCount===7) bg="#2e7d32"; else if(doneCount>=4) bg="#66bb6a"; else if(doneCount>=1) bg="#a5d6a7"; else bg="#eee";
@@ -1287,19 +1342,28 @@ const modal = document.getElementById("monthModal");
 const closeBtn = document.getElementById("closeModal");
 function openModal(){ modal.style.display="flex"; }
 function closeModal(){ modal.style.display="none"; }
-document.getElementById("toggleMonth").onclick=()=>{buildMonth(); openModal();}
+document.getElementById("toggleMonth").onclick = async () => {
+  await buildMonth();
+  openModal();
+};
 closeBtn.onclick = closeModal;
 window.onclick = e=>{ if(e.target==modal) closeModal(); }
 
 document.getElementById("prevDay").onclick=()=>{currentDate.setDate(currentDate.getDate()-1);loadDay(); updateChart(); updateChartMonthTitle(document.documentElement.lang);}
 document.getElementById("nextDay").onclick=()=>{currentDate.setDate(currentDate.getDate()+1);loadDay(); updateChart();  updateChartMonthTitle(document.documentElement.lang);}
-document.getElementById("todayBtn").onclick = () => { currentDate=new Date(); loadDay(); updateChart(); updateChartMonthTitle(document.documentElement.lang); }
+document.getElementById("todayBtn").onclick = async () => {
+  currentDate = new Date();
+  await loadDay();
+  await updateChart();
+  updateChartMonthTitle(document.documentElement.lang);
+};
 
 
 let habitChart, simranChart, jaapChart;
 
-function updateChart() {
-  const all = JSON.parse(localStorage.getItem(STORAGE)) || {};
+async function updateChart() {
+  await openDB();
+  const all = await getAllDays();
   const y = currentDate.getFullYear();
   const m = currentDate.getMonth();
 
@@ -1477,8 +1541,15 @@ function applyLanguage(lang) {
 const savedLang = localStorage.getItem("lang") || "pa";
 document.getElementById("languageSelect").value = savedLang;
 applyLanguage(savedLang);
-loadDay();
-updateChart();
+
+(async () => {
+  try {
+    await loadDay();
+    await updateChart();
+  } catch(e) {
+    console.error("Error loading day:", e);
+  }
+})();
 
 // Wire up language selector
 document.getElementById("languageSelect").onchange = (e) => {
