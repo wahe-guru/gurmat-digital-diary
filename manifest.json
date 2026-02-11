@@ -1,0 +1,15 @@
+{
+  "name": "Gurmat Digital Diary",
+  "short_name": "G.Diary",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#4a148c",
+  "theme_color": "#6a1b9a",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2645/2645897.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
