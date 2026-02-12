@@ -971,15 +971,13 @@ document.getElementById("checklist").innerHTML = habitKeys.map((key,i)=>`
 
 
 ${i===3 ? `
-<div class="simran-block" data-habit="3">
+<div id="simran-habit-block" style="display:none">
   <div class="simran-sessions"></div>
 
-  <button type="button" class="add-simran-btn">
-    + Add Sitting
-  </button>
-</div>
-
-` : ""}
+  <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
+    <button type="button" class="add-simran-btn">+ Add Sitting</button>
+  </div>
+</div>` : ''}
 
 
 
@@ -1028,172 +1026,169 @@ async function loadDay() {
 
   const today = new Date();
 
-  // ✅ Checkbox states and toggle input blocks
-  document.querySelectorAll("#checklist input[type='checkbox']").forEach(cb => {
+document.querySelectorAll("#checklist input[type='checkbox']").forEach(cb => {
     const index = cb.dataset.index;
+    const today = new Date();
 
     cb.checked = day.checks?.[index] || false;
+
+    // 1. Disable checkboxes ONLY for future dates
     cb.disabled = dateKey(currentDate) > dateKey(today);
 
-    // Habit 4 – Simran block toggle (initial load)
+    // 2. Initial block visibility (Initial Load)
     if (index == 3) {
-      const block = document.querySelector('.simran-block[data-habit="3"]');
-      const btn = block?.querySelector(".add-simran-btn");
-
-      if (block) {
-        block.style.display = cb.checked ? "block" : "none";
-        if (btn) btn.disabled = !cb.checked;
-      }
+      const block = document.getElementById('simran-habit-block');
+      if (block) block.style.display = cb.checked ? "block" : "none";
     }
-
-    // Habit 5 – Jaap block toggle (initial load)
     if (index == 4) {
-      const block = document.querySelector('.jaap-block[data-habit="4"]');
+      const block = document.querySelector('.jaap-block');
       const select = block?.querySelector(".jaap-count");
-
       if (block && select) {
         block.style.display = cb.checked ? "block" : "none";
-        select.disabled = !cb.checked || dateKey(currentDate) > dateKey(today);
-        select.value = day.jaapCount ? +day.jaapCount : "0";
+        select.disabled = !cb.checked; // Follows checkbox status
+        select.value = day.jaapCount || "0";
 
+        // Keep the select listener so Jaap saves when changed
         select.onchange = async () => {
-          day.jaapCount = select.value || undefined;
+          day.jaapCount = select.value;
           await saveDay(dayKeyStr, day);
-          await updateChart();
+          updateChart();
         };
       }
     }
 
+    // 3. Handle clicking the habit checkboxes
     cb.onchange = async () => {
-      day.checks = day.checks || {};
       day.checks[index] = cb.checked;
 
-      if (index == 3) { // Habit 4 – Simran
-        const block = document.querySelector('.simran-block[data-habit="3"]');
-        const btn = block?.querySelector(".add-simran-btn");
-
-        if (!Array.isArray(day.simranSessions)) day.simranSessions = [];
-
+      if (index == 3) { // Simran
+        const block = document.getElementById('simran-habit-block');
         if (cb.checked) {
-          // Add Sitting 1 only if it doesn't exist
-          if (day.simranSessions.length === 0) {
-            day.simranSessions.push({ hours: 0, minutes: 0 });
-          }
+          if (block) block.style.display = "block";
+          // Reset to fresh start: 1 sitting at 0:00
+          day.simranSessions = [{ hours: 0, minutes: 0 }];
         } else {
-          // Unchecked → remove all sittings
-          day.simranSessions = [];
+          if (block) block.style.display = "none";
+          day.simranSessions = []; // Wipe data on uncheck
         }
-
-        if (block) {
-          block.style.display = cb.checked ? "block" : "none";
-          if (btn) btn.disabled = !cb.checked;
-        }
-
-        // ✅ Save before rendering
-        await saveDay(dayKeyStr, day);
-        await renderSimran();
       }
 
-      // Habit 5 – Jaap
-      if (index == 4) {
-        const block = document.querySelector('.jaap-block[data-habit="4"]');
+      if (index == 4) { // Jaap
+        const block = document.querySelector('.jaap-block');
         const select = block?.querySelector(".jaap-count");
-
-        if (!cb.checked) {
-          // ✅ reset jaap when unchecked
-          delete day.jaapCount;
-          if (select) select.value = "0";
-        }
-
-        if (block && select) {
-          block.style.display = cb.checked ? "block" : "none";
-          select.disabled = !cb.checked;
+        if (cb.checked) {
+          if (block) block.style.display = "block";
+          if (select) {
+            select.disabled = false;
+            select.value = "0";
+          }
+          day.jaapCount = "0"; // Reset data
+        } else {
+          if (block) block.style.display = "none";
+          if (select) select.disabled = true;
+          delete day.jaapCount; // Wipe data
         }
       }
 
       await saveDay(dayKeyStr, day);
+      if (index == 3) await renderSimran(day); // Re-draw rows
       buildMonth();
       updateChart();
     };
   });
 
-  // Habit 4 – Simran rendering & Add Sitting button
-  const addBtn = document.querySelector(".add-simran-btn");
-  if (addBtn) {
-    addBtn.onclick = async () => {
-      // Use the 'day' object already in scope for this date
-      if (!Array.isArray(day.simranSessions)) day.simranSessions = [];
-      day.simranSessions.push({ hours: 0, minutes: 0 });
-      
-      await saveDay(dayKeyStr, day);
-      await renderSimran();
-      updateChart();
-    };
-  }
 
-  await renderSimran(); // render the rows after checkbox state is set
+  await renderSimran(day); // render the rows after checkbox state is set
 }
 
-async function renderSimran() {
+async function renderSimran(passedDay) {
   await openDB();
   const simranContainer = document.querySelector(".simran-sessions");
   if (!simranContainer) return;
 
   const dayKeyStr = dateKey(currentDate);
-  const all = await getAllDays();
-  const day = all[dayKeyStr] || {};
-  const lang = document.documentElement.lang || "en";
+  // Use the passed day if available, otherwise fetch
+  let day = passedDay; 
+  if (!day) {
+    const all = await getAllDays();
+    day = all[dayKeyStr] || {};
+  }
+    const lang = document.documentElement.lang || "en";
 
-  if (!Array.isArray(day.simranSessions)) day.simranSessions = [];
-  simranContainer.innerHTML = "";
-
-  day.simranSessions.forEach((s, i) => {
-    const row = document.createElement("div");
-    row.className = "simran-row";
-
-    row.innerHTML = `
-      <div class="input-group">
-        <label class="input-label label-sitting">${translations[lang].labels.sitting} ${i+1}</label>
-      </div>
-      <div class="input-group">
-        <label class="input-label label-hours">${translations[lang].labels.hours}</label>
-        <select>${Array.from({ length: 13 }, (_, h) => `<option value="${h}" ${h === s.hours ? "selected" : ""}>${h}</option>`).join("")}</select>
-      </div>
-      <div class="input-group">
-        <label class="input-label label-minutes">${translations[lang].labels.minutes}</label>
-        <select>${Array.from({ length: 12 }, (_, m) => m*5).map(v => 
-          `<option value="${v}" ${v === s.minutes ? "selected" : ""}>${v}</option>`).join("")}</select>
-      </div>
-      ${i > 0 ? `<button class="delete-sitting-btn">❌</button>` : ""}
-    `;
-
-    if (i === 0) {
-      row.style.justifyContent = "center"; 
-    }
-
-    const [hSel, mSel] = row.querySelectorAll("select");
+    // Ensure we have at least one session if the habit is checked
+    if (!Array.isArray(day.simranSessions)) day.simranSessions = [];
     
-    hSel.onchange = mSel.onchange = async () => {
-      s.hours = +hSel.value;
-      s.minutes = +mSel.value;
-      all[dayKeyStr] = day; // Use dayKeyStr for consistency
+    simranContainer.innerHTML = "";
+
+    day.simranSessions.forEach((s, i) => {
+        const row = document.createElement("div");
+        row.className = "simran-row";
+        row.innerHTML = `
+            <div class="input-group">
+                <label class="input-label label-sitting">${translations[lang].labels.sitting} ${i + 1}</label>
+            </div>
+            <div class="input-group">
+                <label class="input-label label-hours">${translations[lang].labels.hours}</label>
+                <select class="h-select">
+                    ${Array.from({ length: 13 }, (_, h) => `<option value="${h}" ${h === s.hours ? "selected" : ""}>${h}</option>`).join("")}
+                </select>
+            </div>
+            <div class="input-group">
+                <label class="input-label label-minutes">${translations[lang].labels.minutes}</label>
+              <select class="m-select">
+  ${Array.from({ length: 12 }, (_, m) => m * 5).map(v => 
+    `<option value="${v}" ${v === s.minutes ? "selected" : ""}>${v}</option>` 
+  ).join("")}
+</select>
+            </div>
+            ${i > 0 ? `<button class="delete-sitting-btn">❌</button>` : ""}
+        `;
+
+        const hSel = row.querySelector(".h-select");
+        const mSel = row.querySelector(".m-select");
+
+        hSel.onchange = async (e) => {
+            s.hours = parseInt(e.target.value);
+            await saveDay(dayKeyStr, day);
+            updateChart();
+        };
+
+        mSel.onchange = async (e) => {
+            s.minutes = parseInt(e.target.value);
+            await saveDay(dayKeyStr, day);
+            updateChart();
+        };
+
+        const deleteBtn = row.querySelector(".delete-sitting-btn");
+        if (deleteBtn) {
+            deleteBtn.onclick = async () => {
+                day.simranSessions.splice(i, 1);
+                await saveDay(dayKeyStr, day);
+                await renderSimran(); 
+                updateChart();
+            };
+        }
+        simranContainer.appendChild(row);
+    });
+
+// Handle the Add Sitting Button
+  const addBtn = document.querySelector(".add-simran-btn");
+  if (addBtn) {
+    // We set onclick here to ensure it attaches to the button 
+    // every time the Simran section is rendered.
+    addBtn.onclick = async () => {
+      // 1. Add a new empty sitting to the local object
+      day.simranSessions.push({ hours: 0, minutes: 0 });
+      
+      // 2. Save the updated object to IndexedDB
       await saveDay(dayKeyStr, day);
+      
+      // 3. Re-draw the rows and update the chart
+      await renderSimran();
       updateChart();
     };
-
-    const deleteBtn = row.querySelector(".delete-sitting-btn");
-    if (deleteBtn) {
-      deleteBtn.onclick = async () => {
-        day.simranSessions.splice(i, 1);
-        all[dayKeyStr] = day;
-        await saveDay(dayKeyStr, day);
-        await renderSimran(); 
-        updateChart();
-      };
-    }
-    simranContainer.appendChild(row);
-  }); // Added missing closing brace for forEach
-} // Added missing closing brace for function
+  }
+}
 
 function updateSimranLabels(lang) {
   const rows = document.querySelectorAll(".simran-row");
